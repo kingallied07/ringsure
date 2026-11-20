@@ -7,6 +7,7 @@ export type OutreachScenario = {
   description: string;
   script: Utterance[];
   outcome: string;
+  summary: string;
 };
 
 export const outreachScenarios: OutreachScenario[] = [
@@ -31,6 +32,8 @@ export const outreachScenarios: OutreachScenario[] = [
       },
     ],
     outcome: "Interested — pilot requested",
+    summary:
+      "Owner is losing calls while out on jobs. Heard the 10-second demo and asked to try it. Next step: send pilot setup details and book the start date.",
   },
   {
     id: "not-interested",
@@ -48,6 +51,7 @@ export const outreachScenarios: OutreachScenario[] = [
       },
     ],
     outcome: "Not interested — do not call",
+    summary: "Polite refusal. Asked not to be called again. Marked do-not-call — no follow-up.",
   },
   {
     id: "voicemail",
@@ -60,6 +64,7 @@ export const outreachScenarios: OutreachScenario[] = [
       },
     ],
     outcome: "Voicemail left",
+    summary: "No answer. Left a short message explaining Ringsure and asking for a callback. Try again in the next call window.",
   },
   {
     id: "price-question",
@@ -77,6 +82,7 @@ export const outreachScenarios: OutreachScenario[] = [
       },
     ],
     outcome: "Pricing sent — follow up",
+    summary: "Wanted costs up front. Published tiers quoted and the free pilot offered. Next step: send the written breakdown.",
   },
   {
     id: "gatekeeper",
@@ -94,6 +100,7 @@ export const outreachScenarios: OutreachScenario[] = [
       },
     ],
     outcome: "Callback requested",
+    summary: "Receptionist took a message for the owner. Callback requested about a free pilot. Next step: call back when the owner is in.",
   },
 ];
 
@@ -111,6 +118,7 @@ export function runMockOutreach(prospect: Prospect, scenarioId: string) {
     scenario: scenario.label,
     transcript: [opening, ...scenario.script],
     outcome: scenario.outcome,
+    summary: scenario.summary,
     disclosureSpoken: true,
   };
 }

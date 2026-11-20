@@ -52,6 +52,7 @@ export type OutreachCall = {
   scenario: string;
   transcript: Utterance[];
   outcome: string;
+  summary?: string;
   disclosureSpoken: boolean;
   createdAt: string;
 };
@@ -467,12 +468,28 @@ export async function addProspect(item: Omit<Prospect, "id" | "createdAt" | "sta
   return prospect;
 }
 
-export async function updateProspectStatus(id: string, status: Prospect["status"]) {
+export async function updateProspect(
+  id: string,
+  patch: Partial<Omit<Prospect, "id" | "createdAt">>,
+) {
   const store = await readStore();
   const prospect = store.prospects.find((p) => p.id === id);
-  if (prospect) prospect.status = status;
+  if (!prospect) return null;
+  Object.assign(prospect, Object.fromEntries(
+    Object.entries(patch).filter(([, value]) => value !== undefined),
+  ));
   await writeStore(store);
-  return prospect ?? null;
+  return prospect;
+}
+
+export async function updateProspectStatus(id: string, status: Prospect["status"]) {
+  return updateProspect(id, { status });
+}
+
+export async function deleteProspect(id: string) {
+  const store = await readStore();
+  store.prospects = store.prospects.filter((p) => p.id !== id);
+  await writeStore(store);
 }
 
 export async function listOutreachCalls() {

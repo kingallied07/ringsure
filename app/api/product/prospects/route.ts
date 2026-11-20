@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 import {
   addProspect,
   addProspectsBulk,
+  deleteProspect,
   listProspects,
-  updateProspectStatus,
+  updateProspect,
   type Prospect,
 } from "@/lib/product/store";
 
@@ -54,18 +55,46 @@ export async function POST(request: Request) {
 }
 
 export async function PATCH(request: Request) {
-  let body: { id?: string; status?: Prospect["status"] };
+  let body: {
+    id?: string;
+    status?: Prospect["status"];
+    businessName?: string;
+    phone?: string;
+    contactName?: string;
+    targetRole?: string;
+    trade?: string;
+    notes?: string;
+  };
   try {
     body = (await request.json()) as typeof body;
   } catch {
     return NextResponse.json({ error: "Invalid request" }, { status: 400 });
   }
 
-  const allowed: Prospect["status"][] = ["new", "contacted", "interested", "pilot", "do-not-call"];
-  if (!body.id || !body.status || !allowed.includes(body.status)) {
-    return NextResponse.json({ error: "Valid id and status required" }, { status: 400 });
+  if (!body.id) {
+    return NextResponse.json({ error: "id required" }, { status: 400 });
   }
 
-  const prospect = await updateProspectStatus(body.id, body.status);
+  const allowed: Prospect["status"][] = ["new", "contacted", "interested", "pilot", "do-not-call"];
+  if (body.status && !allowed.includes(body.status)) {
+    return NextResponse.json({ error: "Invalid status" }, { status: 400 });
+  }
+
+  const prospect = await updateProspect(body.id, {
+    status: body.status,
+    businessName: body.businessName?.trim(),
+    phone: body.phone?.trim(),
+    contactName: body.contactName?.trim(),
+    targetRole: body.targetRole?.trim(),
+    trade: body.trade?.trim(),
+    notes: body.notes?.trim(),
+  });
   return NextResponse.json({ prospect });
+}
+
+export async function DELETE(request: Request) {
+  const id = new URL(request.url).searchParams.get("id");
+  if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });
+  await deleteProspect(id);
+  return NextResponse.json({ ok: true });
 }

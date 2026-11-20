@@ -3,11 +3,18 @@ import { runMockOutreach } from "@/lib/product/outreach";
 import {
   addOutreachCall,
   listCallWindows,
+  listOutreachCalls,
   listProspects,
   updateProspectStatus,
   type Prospect,
 } from "@/lib/product/store";
 import { canCallNow } from "@/lib/product/schedule";
+
+export async function GET(request: Request) {
+  const prospectId = new URL(request.url).searchParams.get("prospectId") ?? undefined;
+  const calls = (await listOutreachCalls()).filter((call) => !prospectId || call.prospectId === prospectId);
+  return NextResponse.json({ calls });
+}
 
 export async function POST(request: Request) {
   let body: { prospectId?: string; scenarioId?: string };

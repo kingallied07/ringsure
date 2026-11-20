@@ -82,18 +82,6 @@ The pilot form posts to `/api/pilot`, which forwards each enquiry to your Telegr
 
 The token is already in `.env.local`, which is gitignored. Keep it in environment variables rather than source code: a bot token grants full control of the bot, including reading messages via `getUpdates`, so it should never be committed. If either variable is missing, the form shows an error instead of falsely claiming the lead was sent.
 
-## Prospect list
-
-`data/prospects-100.csv` contains 100 real UK home-service businesses found via public web search on 20 Nov 2026, in the exact format the Outreach Desk bulk importer expects:
-
-```
-business,phone,contact name,target role,trade
-```
-
-Where a name was public, it's included; otherwise the agent aims at the `target role` (usually owner, or manager for property firms). Import from **Outreach desk → Import a list**.
-
-**Before calling:** numbers can go stale, so verify a sample. Check TPS/CTPS, call only inside your configured window, identify as AI, and honour do-not-call immediately.
-
 ## Before going live
 
 1. **Test the form end to end.** With the Telegram variables set, submit a test enquiry and confirm the message arrives.
