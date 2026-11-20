@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { promises as fs } from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { tradePresets, type Brief, type BriefData } from "./brief";
 import type { Call, EvalRun, Utterance } from "./types";
@@ -84,8 +85,18 @@ type StoreShape = {
   isolationRuns: IsolationRun[];
 };
 
-const dataDir = path.join(process.cwd(), ".data");
+const onServerless = Boolean(
+  process.env.NETLIFY || process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.VERCEL,
+);
+const dataDir = onServerless
+  ? path.join(os.tmpdir(), "ringsure-product")
+  : path.join(process.cwd(), ".data");
 const storePath = path.join(dataDir, "product.json");
+
+// Serverless filesystems are read-only and ephemeral. Keep a memory copy as a
+// fallback so a failed write never takes down a page or API route.
+let memory: StoreShape | null = null;
+let memoryOnly = false;
 
 function seed(): StoreShape {
   const now = new Date().toISOString();
@@ -179,32 +190,42 @@ function seed(): StoreShape {
   };
 }
 
+function normalise(parsed: Partial<StoreShape>): StoreShape {
+  return {
+    businesses: parsed.businesses ?? [],
+    calls: parsed.calls ?? [],
+    evalRuns: parsed.evalRuns ?? [],
+    integration: parsed.integration ?? null,
+    knowledge: parsed.knowledge ?? [],
+    unanswered: parsed.unanswered ?? [],
+    qaReviews: parsed.qaReviews ?? [],
+    prospects: parsed.prospects ?? [],
+    outreachCalls: parsed.outreachCalls ?? [],
+    isolationRuns: parsed.isolationRuns ?? [],
+  };
+}
+
 async function readStore(): Promise<StoreShape> {
+  if (memoryOnly && memory) return memory;
+
   try {
     const raw = await fs.readFile(storePath, "utf8");
-    const parsed = JSON.parse(raw) as Partial<StoreShape>;
-    return {
-      businesses: parsed.businesses ?? [],
-      calls: parsed.calls ?? [],
-      evalRuns: parsed.evalRuns ?? [],
-      integration: parsed.integration ?? null,
-      knowledge: parsed.knowledge ?? [],
-      unanswered: parsed.unanswered ?? [],
-      qaReviews: parsed.qaReviews ?? [],
-      prospects: parsed.prospects ?? [],
-      outreachCalls: parsed.outreachCalls ?? [],
-      isolationRuns: parsed.isolationRuns ?? [],
-    };
+    return normalise(JSON.parse(raw) as Partial<StoreShape>);
   } catch {
-    const fresh = seed();
-    await writeStore(fresh);
-    return fresh;
+    if (!memory) memory = seed();
+    return memory;
   }
 }
 
 async function writeStore(store: StoreShape) {
-  await fs.mkdir(dataDir, { recursive: true });
-  await fs.writeFile(storePath, JSON.stringify(store, null, 2), "utf8");
+  memory = store;
+  try {
+    await fs.mkdir(dataDir, { recursive: true });
+    await fs.writeFile(storePath, JSON.stringify(store, null, 2), "utf8");
+  } catch {
+    // Read-only or ephemeral filesystem — keep serving from memory.
+    memoryOnly = true;
+  }
 }
 
 export async function listBusinesses() {
