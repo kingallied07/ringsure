@@ -136,6 +136,46 @@ export const scenarios: Scenario[] = [
     ],
     expects: { leadCaptured: false, emergency: false },
   },
+  {
+    id: "no-hot-water",
+    label: "No hot water, family at home",
+    description: "Heating-specific urgent job. Should be flagged from the brief's rules.",
+    fromNumber: "+44 7700 900777",
+    script: [
+      { speaker: "caller", text: "Hi, we've got no hot water at all and the boiler's making a strange noise." },
+      { speaker: "ai", text: "Right, I've marked that as urgent. Let me take your name and postcode." },
+      { speaker: "caller", text: "It's Anna Patel, LS4 2AB. We've got two kids at home." },
+      { speaker: "ai", text: "Got it. I'll flag it now and the team will call you straight back." },
+    ],
+    provided: {
+      name: "Anna Patel",
+      phone: "+44 7700 900777",
+      postcode: "LS4 2AB",
+      jobType: "No hot water — boiler fault",
+      notes: "Family with two children at home. Marked urgent.",
+    },
+    expects: { leadCaptured: true, emergency: true },
+  },
+  {
+    id: "gas-safety-certificate",
+    label: "Landlord gas safety certificate",
+    description: "Routine enquiry — must not be escalated or treated as an emergency.",
+    fromNumber: "+44 7700 900888",
+    script: [
+      { speaker: "caller", text: "I'm a landlord, I need a gas safety certificate for a rental property." },
+      { speaker: "ai", text: "No problem. Can I take your name and the postcode?" },
+      { speaker: "caller", text: "Gary Wells, LS2 8AB. It's a one-bed flat, tenant in place." },
+      { speaker: "ai", text: "Thanks Gary. I've passed that on and someone will be in touch." },
+    ],
+    provided: {
+      name: "Gary Wells",
+      phone: "+44 7700 900888",
+      postcode: "LS2 8AB",
+      jobType: "Gas safety certificate — rental property",
+      notes: "Landlord, tenant in place. Standard priority.",
+    },
+    expects: { leadCaptured: true, emergency: false },
+  },
 ];
 
 export function runMockCall(

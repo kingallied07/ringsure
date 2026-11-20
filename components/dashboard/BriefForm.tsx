@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { QUALIFICATION_FIELDS, tradeLabels, TRADES, type Brief, type Trade } from "@/lib/product/brief";
+import type { IntegrationState } from "@/lib/product/store";
 import { CheckIcon } from "@/components/ui/icons";
 
 function toLines(values: string[]) {
@@ -19,7 +20,7 @@ function fromLines(value: string) {
 const inputClass =
   "w-full rounded-xl border border-line bg-white px-4 py-2.5 text-sm text-ink placeholder:text-muted/60 focus:border-accent focus:outline-none";
 
-export default function BriefForm({ brief }: { brief: Brief }) {
+export default function BriefForm({ brief, integration }: { brief: Brief; integration: IntegrationState | null }) {
   const [form, setForm] = useState({
     businessName: brief.businessName,
     trade: brief.trade as Trade,
@@ -30,11 +31,33 @@ export default function BriefForm({ brief }: { brief: Brief }) {
     hours: brief.hours,
     toneNotes: brief.toneNotes,
     transferNumber: brief.transferNumber,
+    phoneNumber: brief.phoneNumber,
     qualificationFields: [...brief.qualificationFields],
     calendarEnabled: brief.calendarEnabled,
   });
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState<{ ok: boolean; message: string } | null>(null);
+  const [connecting, setConnecting] = useState<"brain" | "number" | null>(null);
+  const [connectStatus, setConnectStatus] = useState<string | null>(null);
+
+  async function connect(kind: "brain" | "number") {
+    setConnecting(kind);
+    setConnectStatus(null);
+    try {
+      const response = await fetch(`/api/product/${kind === "brain" ? "provision" : "number"}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ businessId: brief.id }),
+      });
+      const body = (await response.json()) as { result?: { message?: string }; error?: string };
+      if (!response.ok) throw new Error(body.error ?? "Connection failed");
+      setConnectStatus(body.result?.message ?? "Connected.");
+    } catch (cause) {
+      setConnectStatus(cause instanceof Error ? cause.message : "Connection failed");
+    } finally {
+      setConnecting(null);
+    }
+  }
 
   function set<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
     setForm((current) => ({ ...current, [key]: value }));
@@ -66,6 +89,7 @@ export default function BriefForm({ brief }: { brief: Brief }) {
           hours: form.hours,
           toneNotes: form.toneNotes,
           transferNumber: form.transferNumber,
+          phoneNumber: form.phoneNumber,
           qualificationFields: form.qualificationFields,
           calendarEnabled: form.calendarEnabled,
         }),
@@ -93,6 +117,55 @@ export default function BriefForm({ brief }: { brief: Brief }) {
         Business ID <code className="rounded bg-paper-deep px-1.5 py-0.5">{brief.id}</code>. Changes are
         picked up on the next simulated call.
       </p>
+
+      <div className="card mt-8 border-accent/25 bg-accent-soft/40 p-6">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h2 className="font-display text-lg font-bold text-ink">Connection status</h2>
+            <p className="mt-1 text-sm text-muted">
+              {integration?.agentId
+                ? `Brain ${integration.agentId} · voice ${integration.voiceId ?? "default"}`
+                : "Mock mode — no live voice provider connected yet."}
+            </p>
+          </div>
+          <span
+            className={`rounded-full px-3 py-1 text-[11px] font-bold ${
+              integration?.provider === "retell"
+                ? "bg-accent text-white"
+                : "bg-white text-muted ring-1 ring-line"
+            }`}
+          >
+            {integration?.provider === "retell" ? "LIVE" : "MOCK"}
+          </span>
+        </div>
+        <div className="mt-5 flex flex-wrap gap-3">
+          <button
+            type="button"
+            onClick={() => connect("brain")}
+            disabled={connecting !== null}
+            className="rounded-full bg-ink px-5 py-2.5 text-sm font-bold text-white transition hover:bg-ink-soft disabled:opacity-60"
+          >
+            {connecting === "brain" ? "Provisioning…" : "Provision brain"}
+          </button>
+          <button
+            type="button"
+            onClick={() => connect("number")}
+            disabled={connecting !== null}
+            className="rounded-full border border-accent/40 bg-white px-5 py-2.5 text-sm font-bold text-accent-dark transition hover:bg-accent-soft disabled:opacity-60"
+          >
+            {connecting === "number" ? "Connecting…" : "Point number at Ringsure"}
+          </button>
+        </div>
+        {connectStatus && (
+          <p className="mt-4 text-sm font-semibold text-ink-soft" role="status">
+            {connectStatus}
+          </p>
+        )}
+        <p className="mt-4 text-xs leading-relaxed text-muted">
+          Save the brief first if you just changed the phone number. Real calls need RETELL_API_KEY,
+          TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN and NEXT_PUBLIC_APP_URL set in Netlify.
+        </p>
+      </div>
 
       <div className="card mt-8 space-y-7 p-6 sm:p-8">
         <div className="grid gap-5 sm:grid-cols-2">
@@ -231,6 +304,22 @@ export default function BriefForm({ brief }: { brief: Brief }) {
               onChange={(e) => set("transferNumber", e.target.value)}
             />
           </div>
+        </div>
+
+        <div>
+          <label htmlFor="phoneNumber" className="mb-1.5 block text-sm font-semibold text-ink">
+            Ringsure phone number for this business
+          </label>
+          <input
+            id="phoneNumber"
+            className={inputClass}
+            placeholder="+441612345678"
+            value={form.phoneNumber}
+            onChange={(e) => set("phoneNumber", e.target.value)}
+          />
+          <p className="mt-1 text-xs text-muted">
+            E.164 format. The Twilio number that callers dial, or the number you divert from.
+          </p>
         </div>
 
         <div>

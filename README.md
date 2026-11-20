@@ -25,7 +25,7 @@ Open [http://localhost:3000](http://localhost:3000).
 ## What's included
 
 - **Sticky header** with responsive mobile menu
-- **Hero** with a layered, animated phone illustration and a working "Hear a sample call" dialog (uses the browser's UK English voice, with a full transcript fallback)
+- **Hero** with a layered, animated phone illustration and a sample-call dialog showing the exact script (plays a real recording when `NEXT_PUBLIC_SAMPLE_AUDIO_URL` is set)
 - **Problem / cost of missed calls**, **How it works**, **Who it's for**, **Social proof**, **Pricing** (four tiers: Free Pilot, Starter, Growth, Pro), **FAQ** accordion, **Final CTA** and **Footer**
 - Scroll-triggered fade-ups, gentle card lifts and slow-moving background layers via Framer Motion, all respecting `prefers-reduced-motion`
 - SEO metadata, Open Graph / Twitter cards, JSON-LD structured data, semantic HTML, skip link and accessible focus states
@@ -42,6 +42,19 @@ There's a second half to the app at **`/dashboard`** — the beginning of the ac
 - **Placeholder webhook:** `/api/webhooks/retell` acknowledges events; the real verified handler goes here.
 
 Dashboard pages: `/dashboard`, `/dashboard/briefs`, `/dashboard/briefs/[id]`, `/dashboard/simulate`, `/dashboard/evals`. They're marked `noindex`.
+
+## Connecting real calls (Retell + Twilio)
+
+The adapters live in `lib/product/adapters.ts` and fall back to mock mode until credentials are present. The design is still one brain: a single Retell LLM + agent is provisioned once, and each business brief is injected as dynamic variables on every call.
+
+1. Set the variables in `.env.local` and in Netlify (see `.env.example`): `RETELL_API_KEY`, `RETELL_VOICE_ID`, `RETELL_VOICE_MODEL`, `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `NEXT_PUBLIC_APP_URL`.
+2. In a business brief, set its E.164 `phoneNumber` and save.
+3. Open the brief editor and click **Provision brain** (creates the Retell LLM + agent with a natural UK voice, backchannels, accurate STT, a 4-minute cap and the call webhook).
+4. Click **Point number at Ringsure** (updates the Twilio number's `VoiceUrl`).
+5. Inbound calls hit `/api/telephony/twilio/voice`, which registers the call with Retell plus that business's brief and returns TwiML to dial `sip:{call_id}@sip.retellai.com`.
+6. Retell posts `call_ended` / `call_analyzed` to `/api/webhooks/retell`. The signature is verified with HMAC-SHA256 using the Retell API key; the transcript, structured lead and Telegram notification are then saved.
+
+For callers who want to keep their existing number, set a divert/forward on that number to the Ringsure Twilio number. Porting can come later.
 
 ## Lead notifications (Telegram)
 

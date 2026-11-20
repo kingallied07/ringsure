@@ -4,10 +4,20 @@ import path from "node:path";
 import { tradePresets, type Brief, type BriefData } from "./brief";
 import type { Call, EvalRun } from "./types";
 
+export type IntegrationState = {
+  provider: "mock" | "retell";
+  llmId?: string;
+  agentId?: string;
+  twilioNumberSid?: string;
+  provisionedAt?: string;
+  voiceId?: string;
+};
+
 type StoreShape = {
   businesses: Brief[];
   calls: Call[];
   evalRuns: EvalRun[];
+  integration: IntegrationState | null;
 };
 
 const dataDir = path.join(process.cwd(), ".data");
@@ -24,19 +34,21 @@ function seed(): StoreShape {
 
   return {
     businesses: [
-      make("apex-plumbing", "Apex Plumbing", "plumbing"),
       make("heatwise", "Heatwise Heating & Gas", "heating-gas"),
+      make("apex-plumbing", "Apex Plumbing", "plumbing"),
       make("bright-clean", "Bright & Clean", "cleaning"),
     ],
     calls: [],
     evalRuns: [],
+    integration: null,
   };
 }
 
 async function readStore(): Promise<StoreShape> {
   try {
     const raw = await fs.readFile(storePath, "utf8");
-    return JSON.parse(raw) as StoreShape;
+    const parsed = JSON.parse(raw) as StoreShape;
+    return { ...parsed, integration: parsed.integration ?? null };
   } catch {
     const fresh = seed();
     await writeStore(fresh);
@@ -110,4 +122,22 @@ export async function saveEvalRun(run: Omit<EvalRun, "id" | "ranAt">) {
   store.evalRuns.unshift(saved);
   await writeStore(store);
   return saved;
+}
+
+export async function getIntegration() {
+  return (await readStore()).integration;
+}
+
+export async function saveIntegration(integration: IntegrationState) {
+  const store = await readStore();
+  store.integration = integration;
+  await writeStore(store);
+  return integration;
+}
+
+export async function findBusinessByNumber(phoneNumber: string) {
+  const businesses = (await readStore()).businesses;
+  const normalise = (value: string) => value.replace(/[^\d+]/g, "");
+  const target = normalise(phoneNumber);
+  return businesses.find((b) => normalise(b.phoneNumber) === target) ?? null;
 }
