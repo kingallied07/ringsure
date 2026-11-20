@@ -124,6 +124,22 @@ function withTimeout<T>(promise: Promise<T>, ms = 4000): Promise<T> {
   ]);
 }
 
+function defaultCallWindow(): CallWindow {
+  const date = new Date();
+  date.setDate(date.getDate() + 1);
+  date.setHours(8, 30, 0, 0);
+  return {
+    id: "w_outreach",
+    label: "Outreach — weekday mornings",
+    days: [1, 2, 3, 4, 5],
+    start: "08:30",
+    end: "17:00",
+    timezone: "Europe/London",
+    notBefore: date.toISOString(),
+    enabled: true,
+  };
+}
+
 function seed(): StoreShape {
   const now = new Date().toISOString();
   const make = (id: string, businessName: string, trade: keyof typeof tradePresets): Brief => ({
@@ -223,23 +239,7 @@ function seed(): StoreShape {
     ],
     outreachCalls: [],
     isolationRuns: [],
-    callWindows: [
-      {
-        id: "w_outreach",
-        label: "Outreach — weekday mornings",
-        days: [1, 2, 3, 4, 5],
-        start: "08:30",
-        end: "17:00",
-        timezone: "Europe/London",
-        notBefore: (() => {
-          const date = new Date();
-          date.setDate(date.getDate() + 1);
-          date.setHours(8, 30, 0, 0);
-          return date.toISOString();
-        })(),
-        enabled: true,
-      },
-    ],
+    callWindows: [defaultCallWindow()],
   };
 }
 
@@ -500,7 +500,14 @@ export async function addIsolationRun(run: Omit<IsolationRun, "id" | "ranAt">) {
 }
 
 export async function listCallWindows() {
-  return (await readStore()).callWindows;
+  const store = await readStore();
+  if (!store.callWindows.length) {
+    const fallback = defaultCallWindow();
+    store.callWindows = [fallback];
+    await writeStore(store);
+    return [fallback];
+  }
+  return store.callWindows;
 }
 
 export async function saveCallWindow(window: CallWindow) {

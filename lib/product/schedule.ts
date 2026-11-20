@@ -12,7 +12,9 @@ const dayNumbers: Record<string, number> = {
 
 export function canCallNow(windows: CallWindow[], now = new Date()) {
   const active = windows.find((window) => window.enabled);
-  if (!active) return { allowed: true, reason: "No call window configured" };
+  if (!active) {
+    return { allowed: false, reason: "No call window configured — set one in the Outreach desk" };
+  }
 
   if (active.notBefore && now.getTime() < new Date(active.notBefore).getTime()) {
     const when = new Date(active.notBefore).toLocaleString("en-GB", {
