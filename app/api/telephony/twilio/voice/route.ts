@@ -1,6 +1,7 @@
+import type { Brief } from "@/lib/product/brief";
 import { decodeCallConfig } from "@/lib/product/call-config";
 import { registerInboundCall, twilioVoiceXml } from "@/lib/product/adapters";
-import { findBusinessByNumber, getIntegration, type Brief } from "@/lib/product/store";
+import { findBusinessByNumber, getIntegration } from "@/lib/product/store";
 
 export const dynamic = "force-dynamic";
 
