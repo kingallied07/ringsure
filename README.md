@@ -45,6 +45,17 @@ There's a second half to the app at **`/dashboard`** — the **owner control cen
 
 Data is stored in `.data/product.json` (gitignored). All dashboard pages are marked `noindex`.
 
+### Getting into your desk
+
+The whole `/dashboard` area and its owner-only APIs are guarded by `proxy.ts`. Visitors are redirected to `/owner/login`.
+
+- Sign in at **`/owner/login`** with the owner password. The password is stored only as a scrypt hash in `.env.local` (`OWNER_PASSWORD_HASH`); the session is a signed, HTTP-only cookie valid for 7 days.
+- Change it any time with `npm run owner:password -- 'your-new-strong-password'`. This also generates a session secret if one doesn't exist.
+- Set the same two variables in Netlify, then redeploy. Without them the login page reports that owner access is not configured — it never lets anyone in by default.
+- **Sign out** is in the top-right of the dashboard.
+
+The agent-facing endpoint `/api/product/knowledge/search` is deliberately excluded from the guard — Retell calls it with a signed per-call token, not a browser session. Call webhooks and the pilot form are also public by design.
+
 ## Connecting real calls (Retell + Twilio)
 
 The adapters live in `lib/product/adapters.ts` and fall back to mock mode until credentials are present. The design is still one brain: a single Retell LLM + agent is provisioned once, and each business brief is injected as dynamic variables on every call.

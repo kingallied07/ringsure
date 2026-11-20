@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import DashboardNav from "@/components/dashboard/DashboardNav";
+import OwnerLogout from "@/components/dashboard/OwnerLogout";
 import Logo from "@/components/ui/Logo";
 
 export const metadata: Metadata = {
@@ -16,9 +17,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <Link href="/dashboard" className="rounded-lg">
             <Logo />
           </Link>
-          <span className="rounded-full bg-amber-soft px-3 py-1.5 text-xs font-bold text-[#8a5a12]">
-            Owner control · mock mode
-          </span>
+          <div className="flex items-center gap-3">
+            <span className="rounded-full bg-amber-soft px-3 py-1.5 text-xs font-bold text-[#8a5a12]">
+              Owner control · mock mode
+            </span>
+            <OwnerLogout />
+          </div>
         </div>
       </div>
       <div className="container-page py-8">
