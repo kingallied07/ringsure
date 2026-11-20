@@ -23,7 +23,11 @@ export async function POST(request: Request) {
   const query = typeof body.query === "string" ? body.query.trim() : "";
   if (!query) return NextResponse.json({ chunks: [] });
 
-  const { chunks, assertionFailed } = await retrieveKnowledge(context.tenantId, query);
+  const fallback = { chunks: [] as Awaited<ReturnType<typeof retrieveKnowledge>>["chunks"], assertionFailed: false };
+  const { chunks, assertionFailed } = await Promise.race([
+    retrieveKnowledge(context.tenantId, query),
+    new Promise<typeof fallback>((resolve) => setTimeout(() => resolve(fallback), 4000)),
+  ]);
   if (assertionFailed) {
     console.error("Tenant isolation assertion failed for call context:", context.tenantId);
   }

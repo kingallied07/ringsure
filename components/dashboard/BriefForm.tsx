@@ -39,6 +39,7 @@ export default function BriefForm({ brief, integration }: { brief: Brief; integr
   const [status, setStatus] = useState<{ ok: boolean; message: string } | null>(null);
   const [connecting, setConnecting] = useState<"brain" | "number" | null>(null);
   const [connectStatus, setConnectStatus] = useState<string | null>(null);
+  const [agentId, setAgentId] = useState(integration?.agentId ?? "");
 
   async function connect(kind: "brain" | "number") {
     setConnecting(kind);
@@ -47,10 +48,16 @@ export default function BriefForm({ brief, integration }: { brief: Brief; integr
       const response = await fetch(`/api/product/${kind === "brain" ? "provision" : "number"}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ businessId: brief.id }),
+        body: JSON.stringify({ businessId: brief.id, agentId: agentId || undefined }),
       });
-      const body = (await response.json()) as { result?: { message?: string }; error?: string };
+      const body = (await response.json()) as {
+        result?: { message?: string; agentId?: string };
+        integration?: { agentId?: string };
+        error?: string;
+      };
       if (!response.ok) throw new Error(body.error ?? "Connection failed");
+      const newAgentId = body.result?.agentId || body.integration?.agentId;
+      if (kind === "brain" && newAgentId) setAgentId(newAgentId);
       setConnectStatus(body.result?.message ?? "Connected.");
     } catch (cause) {
       setConnectStatus(cause instanceof Error ? cause.message : "Connection failed");

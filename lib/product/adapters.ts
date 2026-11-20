@@ -1,5 +1,6 @@
 import { buildDynamicVariables, POST_CALL_ANALYSIS_FIELDS, SYSTEM_PROMPT, type Brief } from "./brief";
 import { mintCallContext } from "./context";
+import { encodeCallConfig } from "./call-config";
 
 export type ProvisionResult = {
   mode: "mock" | "retell";
@@ -183,8 +184,9 @@ function twilioAuth() {
   return { sid, header: `Basic ${Buffer.from(`${sid}:${token}`).toString("base64")}` };
 }
 
-export async function configureTwilioNumber(brief: Brief): Promise<NumberConfig> {
-  const voiceUrl = `${appUrl()}/api/telephony/twilio/voice`;
+export async function configureTwilioNumber(brief: Brief, agentId?: string): Promise<NumberConfig> {
+  const cfg = agentId ? encodeCallConfig(brief, agentId) : "";
+  const voiceUrl = `${appUrl()}/api/telephony/twilio/voice${cfg ? `?cfg=${encodeURIComponent(cfg)}` : ""}`;
   const auth = twilioAuth();
 
   if (!auth) {

@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { configureTwilioNumber } from "@/lib/product/adapters";
-import { getBusiness, saveBrief } from "@/lib/product/store";
+import { getBusiness, getIntegration, saveBrief } from "@/lib/product/store";
 import { validateBrief } from "@/lib/product/brief";
 
 export async function POST(request: Request) {
-  let body: { businessId?: string };
+  let body: { businessId?: string; agentId?: string };
   try {
     body = (await request.json()) as typeof body;
   } catch {
@@ -15,7 +15,8 @@ export async function POST(request: Request) {
   if (!business) return NextResponse.json({ error: "Business not found" }, { status: 404 });
 
   try {
-    const result = await configureTwilioNumber(business);
+    const integration = await getIntegration();
+    const result = await configureTwilioNumber(business, body.agentId || integration?.agentId);
     const parsed = validateBrief(business);
     if (result.sid && parsed.success) {
       await saveBrief(business.id, parsed.data);

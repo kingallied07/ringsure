@@ -103,6 +103,13 @@ async function blobStore() {
   return getStore("ringsure-product");
 }
 
+function withTimeout<T>(promise: Promise<T>, ms = 4000): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<never>((_, reject) => setTimeout(() => reject(new Error("store timeout")), ms)),
+  ]);
+}
+
 function seed(): StoreShape {
   const now = new Date().toISOString();
   const make = (id: string, businessName: string, trade: keyof typeof tradePresets): Brief => ({
@@ -213,11 +220,11 @@ function normalise(parsed: Partial<StoreShape>): StoreShape {
 async function readStore(): Promise<StoreShape> {
   if (onServerless) {
     try {
-      const blobs = await blobStore();
-      const stored = (await blobs.get("product", { type: "json" })) as StoreShape | null;
+      const blobs = await withTimeout(blobStore());
+      const stored = (await withTimeout(blobs.get("product", { type: "json" }))) as StoreShape | null;
       if (stored) return normalise(stored);
       const fresh = seed();
-      await blobs.setJSON("product", fresh);
+      await withTimeout(blobs.setJSON("product", fresh));
       return fresh;
     } catch (error) {
       console.error("Netlify Blobs read failed:", error);
@@ -241,8 +248,8 @@ async function writeStore(store: StoreShape) {
 
   if (onServerless) {
     try {
-      const blobs = await blobStore();
-      await blobs.setJSON("product", store);
+      const blobs = await withTimeout(blobStore());
+      await withTimeout(blobs.setJSON("product", store));
     } catch (error) {
       console.error("Netlify Blobs write failed:", error);
       memoryOnly = true;
