@@ -98,6 +98,11 @@ const storePath = path.join(dataDir, "product.json");
 let memory: StoreShape | null = null;
 let memoryOnly = false;
 
+async function blobStore() {
+  const { getStore } = await import("@netlify/blobs");
+  return getStore("ringsure-product");
+}
+
 function seed(): StoreShape {
   const now = new Date().toISOString();
   const make = (id: string, businessName: string, trade: keyof typeof tradePresets): Brief => ({
@@ -206,8 +211,22 @@ function normalise(parsed: Partial<StoreShape>): StoreShape {
 }
 
 async function readStore(): Promise<StoreShape> {
-  if (memoryOnly && memory) return memory;
+  if (onServerless) {
+    try {
+      const blobs = await blobStore();
+      const stored = (await blobs.get("product", { type: "json" })) as StoreShape | null;
+      if (stored) return normalise(stored);
+      const fresh = seed();
+      await blobs.setJSON("product", fresh);
+      return fresh;
+    } catch (error) {
+      console.error("Netlify Blobs read failed:", error);
+      if (!memory) memory = seed();
+      return memory;
+    }
+  }
 
+  if (memoryOnly && memory) return memory;
   try {
     const raw = await fs.readFile(storePath, "utf8");
     return normalise(JSON.parse(raw) as Partial<StoreShape>);
@@ -219,11 +238,22 @@ async function readStore(): Promise<StoreShape> {
 
 async function writeStore(store: StoreShape) {
   memory = store;
+
+  if (onServerless) {
+    try {
+      const blobs = await blobStore();
+      await blobs.setJSON("product", store);
+    } catch (error) {
+      console.error("Netlify Blobs write failed:", error);
+      memoryOnly = true;
+    }
+    return;
+  }
+
   try {
     await fs.mkdir(dataDir, { recursive: true });
     await fs.writeFile(storePath, JSON.stringify(store, null, 2), "utf8");
   } catch {
-    // Read-only or ephemeral filesystem — keep serving from memory.
     memoryOnly = true;
   }
 }
