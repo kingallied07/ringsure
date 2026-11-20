@@ -33,6 +33,11 @@ export async function POST(request: Request) {
     return xml(twilioVoiceXml(call.sipUri));
   } catch (error) {
     console.error("Inbound call setup failed:", error);
+    const debug = new URL(request.url).searchParams.has("debug");
+    if (debug) {
+      const message = error instanceof Error ? error.message : String(error);
+      return xml(`<Response><Say voice="alice">${message.replace(/[<>&]/g, " ")}</Say></Response>`);
+    }
     return xml(
       `<Response><Say voice="alice">Sorry, we're having trouble connecting this call. Please try again shortly.</Say></Response>`,
     );
