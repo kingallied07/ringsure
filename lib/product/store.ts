@@ -2,7 +2,65 @@ import { randomUUID } from "node:crypto";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { tradePresets, type Brief, type BriefData } from "./brief";
-import type { Call, EvalRun } from "./types";
+import type { Call, EvalRun, Utterance } from "./types";
+
+export type KnowledgeKind = "faq" | "website" | "pricing" | "rule" | "note";
+
+export type KnowledgeChunk = {
+  id: string;
+  tenantId: string;
+  kind: KnowledgeKind;
+  title: string;
+  content: string;
+  createdAt: string;
+};
+
+export type UnansweredQuestion = {
+  id: string;
+  tenantId: string;
+  callId: string;
+  question: string;
+  createdAt: string;
+  status: "open" | "resolved";
+};
+
+export type QaReview = {
+  id: string;
+  tenantId: string;
+  callId: string;
+  score: number;
+  notes: string;
+  createdAt: string;
+};
+
+export type Prospect = {
+  id: string;
+  businessName: string;
+  phone: string;
+  trade: string;
+  status: "new" | "contacted" | "interested" | "pilot" | "do-not-call";
+  notes: string;
+  createdAt: string;
+};
+
+export type OutreachCall = {
+  id: string;
+  prospectId: string;
+  scenario: string;
+  transcript: Utterance[];
+  outcome: string;
+  disclosureSpoken: boolean;
+  createdAt: string;
+};
+
+export type IsolationCheck = { name: string; passed: boolean; detail: string };
+
+export type IsolationRun = {
+  id: string;
+  ranAt: string;
+  results: IsolationCheck[];
+  summary: { passed: number; total: number };
+};
 
 export type IntegrationState = {
   provider: "mock" | "retell";
@@ -18,6 +76,12 @@ type StoreShape = {
   calls: Call[];
   evalRuns: EvalRun[];
   integration: IntegrationState | null;
+  knowledge: KnowledgeChunk[];
+  unanswered: UnansweredQuestion[];
+  qaReviews: QaReview[];
+  prospects: Prospect[];
+  outreachCalls: OutreachCall[];
+  isolationRuns: IsolationRun[];
 };
 
 const dataDir = path.join(process.cwd(), ".data");
@@ -41,14 +105,96 @@ function seed(): StoreShape {
     calls: [],
     evalRuns: [],
     integration: null,
+    knowledge: [
+      {
+        id: "k_heat_1",
+        tenantId: "heatwise",
+        kind: "pricing",
+        title: "Heating call-out and service prices",
+        content:
+          "Heatwise Heating & Gas: no call-out charge within 10 miles of Leeds. Boiler service £89. Landlord gas safety certificate £75. Emergency boiler repair quoted after assessment — never quote a final price on the phone.",
+        createdAt: now,
+      },
+      {
+        id: "k_heat_2",
+        tenantId: "heatwise",
+        kind: "faq",
+        title: "Do you work weekends?",
+        content:
+          "Yes. Heatwise covers Leeds, Bradford and Wakefield seven days a week, 7am to 8pm. Emergency boiler callouts are prioritised over routine servicing.",
+        createdAt: now,
+      },
+      {
+        id: "k_apex_1",
+        tenantId: "apex-plumbing",
+        kind: "pricing",
+        title: "Apex Plumbing pricing",
+        content:
+          "Apex Plumbing charges a £45 call-out fee, refunded if you go ahead. Blocked drains start at £120. Apex does not fit complete bathrooms — refer those to a partner.",
+        createdAt: now,
+      },
+      {
+        id: "k_bright_1",
+        tenantId: "bright-clean",
+        kind: "pricing",
+        title: "Bright & Clean pricing",
+        content:
+          "Bright & Clean: end of tenancy cleans from £180 for a two-bed flat. Regular weekly cleaning from £16 per hour. Carpets and ovens are charged separately.",
+        createdAt: now,
+      },
+    ],
+    unanswered: [],
+    qaReviews: [],
+    prospects: [
+      {
+        id: "p_1",
+        businessName: "Northside Gas & Heating",
+        phone: "+44 161 555 0101",
+        trade: "Heating & Gas",
+        status: "new",
+        notes: "Found via Google Maps — misses calls while engineers are out.",
+        createdAt: now,
+      },
+      {
+        id: "p_2",
+        businessName: "Rapid Rooter Plumbing",
+        phone: "+44 161 555 0102",
+        trade: "Plumbing",
+        status: "new",
+        notes: "Two vans, no receptionist. Good pilot candidate.",
+        createdAt: now,
+      },
+      {
+        id: "p_3",
+        businessName: "Clean Sweep Ltd",
+        phone: "+44 117 555 0103",
+        trade: "Cleaning",
+        status: "contacted",
+        notes: "Sent pilot email — follow up next week.",
+        createdAt: now,
+      },
+    ],
+    outreachCalls: [],
+    isolationRuns: [],
   };
 }
 
 async function readStore(): Promise<StoreShape> {
   try {
     const raw = await fs.readFile(storePath, "utf8");
-    const parsed = JSON.parse(raw) as StoreShape;
-    return { ...parsed, integration: parsed.integration ?? null };
+    const parsed = JSON.parse(raw) as Partial<StoreShape>;
+    return {
+      businesses: parsed.businesses ?? [],
+      calls: parsed.calls ?? [],
+      evalRuns: parsed.evalRuns ?? [],
+      integration: parsed.integration ?? null,
+      knowledge: parsed.knowledge ?? [],
+      unanswered: parsed.unanswered ?? [],
+      qaReviews: parsed.qaReviews ?? [],
+      prospects: parsed.prospects ?? [],
+      outreachCalls: parsed.outreachCalls ?? [],
+      isolationRuns: parsed.isolationRuns ?? [],
+    };
   } catch {
     const fresh = seed();
     await writeStore(fresh);
@@ -140,4 +286,115 @@ export async function findBusinessByNumber(phoneNumber: string) {
   const normalise = (value: string) => value.replace(/[^\d+]/g, "");
   const target = normalise(phoneNumber);
   return businesses.find((b) => normalise(b.phoneNumber) === target) ?? null;
+}
+
+export async function tenantExists(tenantId: string) {
+  return Boolean((await readStore()).businesses.some((b) => b.id === tenantId));
+}
+
+export async function listKnowledge(tenantId?: string) {
+  const all = (await readStore()).knowledge;
+  return tenantId ? all.filter((item) => item.tenantId === tenantId) : all;
+}
+
+export async function addKnowledge(item: Omit<KnowledgeChunk, "id" | "createdAt">) {
+  const store = await readStore();
+  const chunk: KnowledgeChunk = { ...item, id: randomUUID().slice(0, 8), createdAt: new Date().toISOString() };
+  store.knowledge.unshift(chunk);
+  await writeStore(store);
+  return chunk;
+}
+
+export async function deleteKnowledge(id: string, tenantId: string) {
+  const store = await readStore();
+  store.knowledge = store.knowledge.filter((item) => !(item.id === id && item.tenantId === tenantId));
+  await writeStore(store);
+}
+
+export async function listUnanswered(tenantId?: string) {
+  const all = (await readStore()).unanswered;
+  return tenantId ? all.filter((item) => item.tenantId === tenantId) : all;
+}
+
+export async function addUnanswered(item: { tenantId: string; callId: string; question: string }) {
+  const store = await readStore();
+  const entry: UnansweredQuestion = {
+    ...item,
+    id: randomUUID().slice(0, 8),
+    createdAt: new Date().toISOString(),
+    status: "open",
+  };
+  store.unanswered.unshift(entry);
+  await writeStore(store);
+  return entry;
+}
+
+export async function resolveUnanswered(id: string) {
+  const store = await readStore();
+  const item = store.unanswered.find((q) => q.id === id);
+  if (item) item.status = "resolved";
+  await writeStore(store);
+  return item ?? null;
+}
+
+export async function listQaReviews(tenantId?: string) {
+  const all = (await readStore()).qaReviews;
+  return tenantId ? all.filter((item) => item.tenantId === tenantId) : all;
+}
+
+export async function addQaReview(item: Omit<QaReview, "id" | "createdAt">) {
+  const store = await readStore();
+  const review: QaReview = { ...item, id: randomUUID().slice(0, 8), createdAt: new Date().toISOString() };
+  store.qaReviews.unshift(review);
+  await writeStore(store);
+  return review;
+}
+
+export async function listProspects() {
+  return (await readStore()).prospects;
+}
+
+export async function addProspect(item: Omit<Prospect, "id" | "createdAt" | "status"> & { status?: Prospect["status"] }) {
+  const store = await readStore();
+  const prospect: Prospect = {
+    ...item,
+    status: item.status ?? "new",
+    id: randomUUID().slice(0, 8),
+    createdAt: new Date().toISOString(),
+  };
+  store.prospects.unshift(prospect);
+  await writeStore(store);
+  return prospect;
+}
+
+export async function updateProspectStatus(id: string, status: Prospect["status"]) {
+  const store = await readStore();
+  const prospect = store.prospects.find((p) => p.id === id);
+  if (prospect) prospect.status = status;
+  await writeStore(store);
+  return prospect ?? null;
+}
+
+export async function listOutreachCalls() {
+  return (await readStore()).outreachCalls;
+}
+
+export async function addOutreachCall(call: Omit<OutreachCall, "id" | "createdAt">) {
+  const store = await readStore();
+  const saved: OutreachCall = { ...call, id: randomUUID().slice(0, 8), createdAt: new Date().toISOString() };
+  store.outreachCalls.unshift(saved);
+  await writeStore(store);
+  return saved;
+}
+
+export async function listIsolationRuns() {
+  return (await readStore()).isolationRuns;
+}
+
+export async function addIsolationRun(run: Omit<IsolationRun, "id" | "ranAt">) {
+  const store = await readStore();
+  const saved: IsolationRun = { ...run, id: randomUUID().slice(0, 8), ranAt: new Date().toISOString() };
+  store.isolationRuns.unshift(saved);
+  await writeStore(store);
+  return saved;
 }

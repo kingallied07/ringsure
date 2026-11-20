@@ -1,9 +1,5 @@
-import {
-  buildDynamicVariables,
-  POST_CALL_ANALYSIS_FIELDS,
-  SYSTEM_PROMPT,
-  type Brief,
-} from "./brief";
+import { buildDynamicVariables, POST_CALL_ANALYSIS_FIELDS, SYSTEM_PROMPT, type Brief } from "./brief";
+import { mintCallContext } from "./context";
 
 export type ProvisionResult = {
   mode: "mock" | "retell";
@@ -64,6 +60,24 @@ async function provisionRetell(): Promise<ProvisionResult> {
         type: "end_call",
         name: "end_call",
         description: "End the call once the caller's details have been captured and confirmed.",
+      },
+      {
+        type: "custom",
+        name: "search_knowledge",
+        description:
+          "Look up this business's approved facts, FAQ answers and price guidance when the caller asks a question you are not certain about. Never call it for another business.",
+        url: `${appUrl()}/api/product/knowledge/search`,
+        method: "POST",
+        headers: { "x-ringsure-context": "{{call_context_token}}" },
+        parameters: {
+          type: "object",
+          properties: {
+            query: { type: "string", description: "The caller's question, in their own words." },
+          },
+          required: ["query"],
+        },
+        speak_during_execution: true,
+        execution_message_description: "Let me check that for you.",
       },
     ],
     model: "gpt-4.1-mini",
@@ -143,7 +157,7 @@ export async function registerInboundCall(input: {
     from_number: input.fromNumber,
     to_number: input.toNumber,
     direction: "inbound",
-    dynamic_variables: buildDynamicVariables(input.brief),
+    dynamic_variables: buildDynamicVariables(input.brief, mintCallContext(input.brief.id, "inbound")),
     metadata: { businessId: input.brief.id },
   });
 

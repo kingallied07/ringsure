@@ -156,7 +156,7 @@ export const tradePlaybooks: Record<Trade, string> = {
     "Ask property type and size, number of rooms or bathrooms, and preferred date. End of tenancy and deep cleans need extra detail. No emergency escalation unless the brief says so.",
 };
 
-export function buildDynamicVariables(brief: Brief): Record<string, string> {
+export function buildDynamicVariables(brief: Brief, callContext = ""): Record<string, string> {
   return {
     business_name: brief.businessName,
     trade: tradeLabels[brief.trade],
@@ -171,6 +171,7 @@ export function buildDynamicVariables(brief: Brief): Record<string, string> {
     tone_notes: brief.toneNotes || "Friendly and efficient.",
     trade_playbook: tradePlaybooks[brief.trade],
     transfer_number: brief.transferNumber || "none configured — offer a callback instead",
+    call_context_token: callContext,
   };
 }
 

@@ -5,8 +5,11 @@ import { usePathname } from "next/navigation";
 
 const tabs = [
   { href: "/dashboard", label: "Overview" },
-  { href: "/dashboard/briefs", label: "Briefs" },
-  { href: "/dashboard/simulate", label: "Simulate a call" },
+  { href: "/dashboard/briefs", label: "Tenants" },
+  { href: "/dashboard/knowledge", label: "Knowledge" },
+  { href: "/dashboard/outreach", label: "Outreach desk" },
+  { href: "/dashboard/qa", label: "QA" },
+  { href: "/dashboard/simulate", label: "Simulate" },
   { href: "/dashboard/evals", label: "Evals" },
 ];
 

@@ -33,15 +33,17 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ## Product prototype (mock mode)
 
-There's a second half to the app at **`/dashboard`** — the beginning of the actual Ringsure product. It runs entirely locally with no paid accounts.
+There's a second half to the app at **`/dashboard`** — the **owner control centre** for the real product. It runs locally with no paid accounts. Customer dashboards are deliberately not built yet.
 
 - **One brain:** `lib/product/brief.ts` holds the single system prompt, tool definitions and AI disclosure. There is no per-trade agent.
-- **Structured briefs:** every business is configured with the same JSON schema. The three trade presets (plumbing, heating/gas, cleaning) are just pre-filled briefs.
-- **Simulated calls:** `lib/product/mock-brain.ts` runs six scripted callers through the real rules (disclosure, qualification fields, emergency matching, transfer/booking conditions, no invented prices). Calls and leads are stored in `.data/product.json` (gitignored) and can also notify Telegram.
-- **Eval harness:** `/dashboard/evals` runs the scripted suite against any brief and scores each check. This is the framework you'll keep when real AI calls replace the mock brain.
-- **Placeholder webhook:** `/api/webhooks/retell` acknowledges events; the real verified handler goes here.
+- **Tenants and briefs:** each business is a tenant with the same brief schema. Trade presets are just pre-filled briefs. Add tenants from `/dashboard/briefs`.
+- **Tenant knowledge:** `/dashboard/knowledge` stores approved FAQ, pricing and policy chunks per tenant. The agent calls `search_knowledge` mid-call, but tenant identity comes from a signed call context — the model cannot choose which tenant to read.
+- **Isolation checks:** `/dashboard/knowledge` runs adversarial tests (missing/tampered tokens, cross-tenant probes) to prove knowledge can't leak between businesses.
+- **Outreach desk:** `/dashboard/outreach` uses the same brain to call prospects, demo the product and offer the free pilot. It discloses that it's AI and honours do-not-call.
+- **QA loop:** `/dashboard/qa` tracks unanswered questions and call reviews — the raw material for improving knowledge and prompts.
+- **Simulated calls and evals:** `/dashboard/simulate` and `/dashboard/evals` run scripted callers through the real rules before any paid accounts are connected.
 
-Dashboard pages: `/dashboard`, `/dashboard/briefs`, `/dashboard/briefs/[id]`, `/dashboard/simulate`, `/dashboard/evals`. They're marked `noindex`.
+Data is stored in `.data/product.json` (gitignored). All dashboard pages are marked `noindex`.
 
 ## Connecting real calls (Retell + Twilio)
 
@@ -92,12 +94,13 @@ app/
   page.tsx            Section composition
   globals.css         Tailwind v4 theme + base styles
   api/pilot/route.ts  Forwards pilot requests to Telegram
-  api/product/        Briefs, simulation, calls and eval endpoints
-  api/webhooks/       Placeholder Retell webhook
-  dashboard/          Product prototype UI (noindex)
-lib/product/          Brief schema, brain prompt, mock scenarios, store
+  api/product/        Briefs, tenants, knowledge, isolation, QA, outreach, simulation
+  api/telephony/      Twilio inbound voice webhook
+  api/webhooks/       Verified Retell call webhook
+  dashboard/          Owner control centre (noindex)
+lib/product/          Brief schema, brain prompt, mock scenarios, adapters, store, retrieval
 components/
-  dashboard/          Brief editor, simulator, eval runner
+  dashboard/          Tenants, knowledge, outreach, QA, brief editor, simulator, evals
   Header.tsx  Hero.tsx  Problem.tsx  HowItWorks.tsx
   WhoFor.tsx  SocialProof.tsx  Pricing.tsx  FAQ.tsx
   FinalCTA.tsx  Footer.tsx  SampleCall.tsx

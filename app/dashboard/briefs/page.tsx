@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { listBusinesses } from "@/lib/product/store";
 import { tradeLabels } from "@/lib/product/brief";
+import NewTenantForm from "@/components/dashboard/NewTenantForm";
 
 export const dynamic = "force-dynamic";
 
@@ -15,7 +16,9 @@ export default async function BriefsPage() {
         points — edit the fields to match the customer.
       </p>
 
-      <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      <div className="mt-8 grid gap-6 lg:grid-cols-[300px_1fr]">
+        <NewTenantForm />
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {businesses.map((brief) => (
           <Link key={brief.id} href={`/dashboard/briefs/${brief.id}`} className="card block p-6 transition hover:-translate-y-1">
             <div className="flex items-start justify-between gap-3">
@@ -52,6 +55,7 @@ export default async function BriefsPage() {
             <p className="mt-5 text-xs font-bold text-accent">Edit brief →</p>
           </Link>
         ))}
+        </div>
       </div>
     </div>
   );

@@ -17,7 +17,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <Logo />
           </Link>
           <span className="rounded-full bg-amber-soft px-3 py-1.5 text-xs font-bold text-[#8a5a12]">
-            Product prototype · mock mode
+            Owner control · mock mode
           </span>
         </div>
       </div>
