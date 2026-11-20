@@ -48,7 +48,11 @@ export default function BriefForm({ brief, integration }: { brief: Brief; integr
       const response = await fetch(`/api/product/${kind === "brain" ? "provision" : "number"}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ businessId: brief.id, agentId: agentId || undefined }),
+        body: JSON.stringify({
+          businessId: brief.id,
+          agentId: agentId || undefined,
+          brief: kind === "number" ? { ...brief, phoneNumber: form.phoneNumber } : undefined,
+        }),
       });
       const body = (await response.json()) as {
         result?: { message?: string; agentId?: string };
