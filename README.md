@@ -31,21 +31,23 @@ Open [http://localhost:3000](http://localhost:3000).
 - SEO metadata, Open Graph / Twitter cards, JSON-LD structured data, semantic HTML, skip link and accessible focus states
 - A visible AI disclosure in the FAQ, final CTA and footer
 
+## Lead notifications (Telegram)
+
+The pilot form posts to `/api/pilot`, which forwards each enquiry to your Telegram chat as a formatted message.
+
+1. Send any message to your bot in Telegram.
+2. Run `npm run chat-id` — it prints the chat ID(s) from the bot's recent updates.
+3. Copy the right ID into `TELEGRAM_CHAT_ID` in `.env.local`.
+4. Add **both** `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` under **Site configuration → Environment variables** in Netlify, then redeploy.
+
+The token is already in `.env.local`, which is gitignored. Keep it in environment variables rather than source code: a bot token grants full control of the bot, including reading messages via `getUpdates`, so it should never be committed. If either variable is missing, the form shows an error instead of falsely claiming the lead was sent.
+
 ## Before going live
 
-1. **Replace illustrative social proof.** The three pilot quotes are placeholders for layout only. Swap in verified customer results.
-2. **Wire up the pilot form.** In `components/FinalCTA.tsx`, `handleSubmit` currently shows a success state only. Replace the marked comment with a call to your backend/CRM, e.g.:
-
-   ```ts
-   await fetch("/api/pilot", {
-     method: "POST",
-     headers: { "Content-Type": "application/json" },
-     body: JSON.stringify(Object.fromEntries(new FormData(event.currentTarget))),
-   });
-   ```
-
-3. **Update contact details and URLs.** `hello@ringsure.co.uk` and `https://ringsure.co.uk` appear in the layout metadata, FAQ and footer.
-4. **Confirm claims and compliance.** Check all statistics, pricing and GDPR/disclosure wording with the client before publishing.
+1. **Test the form end to end.** With the Telegram variables set, submit a test enquiry and confirm the message arrives.
+2. **Replace illustrative social proof.** The three pilot quotes are placeholders for layout only. Swap in verified customer results.
+3. **Update the domain if needed.** `https://ringsure.co.uk` appears in the layout metadata; `ringsure.uk@gmail.com` appears in the FAQ, final CTA and footer.
+4. **Confirm claims and compliance.** Check all statistics, pricing and GDPR/disclosure wording before publishing.
 
 ## Colours
 
@@ -61,12 +63,15 @@ The palette lives in `app/globals.css` under `@theme`:
 
 ```
 app/
-  layout.tsx        Fonts, metadata, JSON-LD
-  page.tsx          Section composition
-  globals.css       Tailwind v4 theme + base styles
+  layout.tsx          Fonts, metadata, JSON-LD
+  page.tsx            Section composition
+  globals.css         Tailwind v4 theme + base styles
+  api/pilot/route.ts  Forwards pilot requests to Telegram
 components/
   Header.tsx  Hero.tsx  Problem.tsx  HowItWorks.tsx
   WhoFor.tsx  SocialProof.tsx  Pricing.tsx  FAQ.tsx
   FinalCTA.tsx  Footer.tsx  SampleCall.tsx
-  ui/             Reveal, Button, Logo, icons, HeroGraphic
+  ui/               Reveal, Logo, icons, HeroGraphic
+scripts/
+  get-chat-id.mjs     Finds your Telegram chat ID
 ```

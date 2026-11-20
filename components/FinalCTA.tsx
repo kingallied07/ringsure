@@ -21,13 +21,36 @@ const reassurance = ["No card required", "Live within 24 hours", "Cancel any tim
 
 export default function FinalCTA() {
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const reduce = useReducedMotion();
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    // Wire this to your backend / CRM when ready.
-    // e.g. await fetch("/api/pilot", { method: "POST", body: new FormData(event.currentTarget) });
-    setSubmitted(true);
+    const form = event.currentTarget;
+    const values = Object.fromEntries(new FormData(form));
+
+    setSubmitting(true);
+    setError(null);
+
+    try {
+      const response = await fetch("/api/pilot", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(values),
+      });
+      const result = (await response.json()) as { error?: string };
+
+      if (!response.ok) {
+        throw new Error(result.error || "Something went wrong. Please try again.");
+      }
+
+      setSubmitted(true);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Something went wrong. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -101,7 +124,10 @@ export default function FinalCTA() {
                         </p>
                         <button
                           type="button"
-                          onClick={() => setSubmitted(false)}
+                          onClick={() => {
+                            setError(null);
+                            setSubmitted(false);
+                          }}
                           className="mt-6 text-sm font-bold text-accent underline decoration-accent/30 underline-offset-4 hover:text-accent-dark"
                         >
                           Send another request
@@ -192,11 +218,25 @@ export default function FinalCTA() {
 
                         <button
                           type="submit"
-                          className="group inline-flex w-full items-center justify-center gap-2 rounded-full bg-accent px-6 py-4 text-base font-bold text-white shadow-[0_16px_36px_-16px_rgba(14,124,116,0.8)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-accent-dark"
+                          disabled={submitting}
+                          className="group inline-flex w-full items-center justify-center gap-2 rounded-full bg-accent px-6 py-4 text-base font-bold text-white shadow-[0_16px_36px_-16px_rgba(14,124,116,0.8)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-accent-dark disabled:cursor-not-allowed disabled:opacity-70 disabled:hover:translate-y-0"
                         >
-                          Start my free pilot
-                          <span className="transition-transform duration-300 group-hover:translate-x-1">→</span>
+                          {submitting ? "Sending your request…" : "Start my free pilot"}
+                          {!submitting && (
+                            <span className="transition-transform duration-300 group-hover:translate-x-1">
+                              →
+                            </span>
+                          )}
                         </button>
+
+                        {error && (
+                          <p
+                            role="alert"
+                            className="rounded-xl border border-loss/25 bg-[#fbf0ed] px-4 py-3 text-center text-sm text-loss"
+                          >
+                            {error}
+                          </p>
+                        )}
 
                         <p className="flex items-center justify-center gap-1.5 text-center text-xs text-muted">
                           <ClockIcon className="h-3.5 w-3.5" />
@@ -208,7 +248,7 @@ export default function FinalCTA() {
                 </div>
                 <p className="mt-4 flex items-center justify-center gap-2 text-center text-xs text-muted">
                   <MailIcon className="h-3.5 w-3.5" />
-                  Prefer email? Write to hello@ringsure.co.uk
+                  Prefer email? Write to ringsure.uk@gmail.com
                 </p>
               </div>
             </div>

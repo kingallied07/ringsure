@@ -63,10 +63,10 @@ export default function Footer() {
             <ul className="mt-5 space-y-3 text-sm">
               <li>
                 <a
-                  href="mailto:hello@ringsure.co.uk"
+                  href="mailto:ringsure.uk@gmail.com"
                   className="text-white/75 transition-colors hover:text-amber"
                 >
-                  hello@ringsure.co.uk
+                  ringsure.uk@gmail.com
                 </a>
               </li>
               <li className="text-white/75">Monday–Friday, 9am–6pm</li>

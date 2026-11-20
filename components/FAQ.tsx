@@ -53,10 +53,10 @@ export default function FAQ() {
               <p className="mt-5 max-w-sm text-base leading-relaxed text-muted">
                 Still got a question? Email us at{" "}
                 <a
-                  href="mailto:hello@ringsure.co.uk"
+                  href="mailto:ringsure.uk@gmail.com"
                   className="font-semibold text-accent underline decoration-accent/30 underline-offset-4 hover:text-accent-dark"
                 >
-                  hello@ringsure.co.uk
+                  ringsure.uk@gmail.com
                 </a>{" "}
                 and a real human will get back to you.
               </p>
