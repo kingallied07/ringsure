@@ -38,6 +38,8 @@ export type Prospect = {
   id: string;
   businessName: string;
   phone: string;
+  contactName?: string;
+  targetRole?: string;
   trade: string;
   status: "new" | "contacted" | "interested" | "pilot" | "do-not-call";
   notes: string;
@@ -55,6 +57,17 @@ export type OutreachCall = {
 };
 
 export type IsolationCheck = { name: string; passed: boolean; detail: string };
+
+export type CallWindow = {
+  id: string;
+  label: string;
+  days: number[];
+  start: string;
+  end: string;
+  timezone: string;
+  notBefore?: string;
+  enabled: boolean;
+};
 
 export type IsolationRun = {
   id: string;
@@ -83,6 +96,7 @@ type StoreShape = {
   prospects: Prospect[];
   outreachCalls: OutreachCall[];
   isolationRuns: IsolationRun[];
+  callWindows: CallWindow[];
 };
 
 const onServerless = Boolean(
@@ -121,6 +135,7 @@ function seed(): StoreShape {
 
   return {
     businesses: [
+      make("ringsure", "Ringsure", "ringsure"),
       make("heatwise", "Heatwise Heating & Gas", "heating-gas"),
       make("apex-plumbing", "Apex Plumbing", "plumbing"),
       make("bright-clean", "Bright & Clean", "cleaning"),
@@ -129,6 +144,15 @@ function seed(): StoreShape {
     evalRuns: [],
     integration: null,
     knowledge: [
+      {
+        id: "k_ringsure_1",
+        tenantId: "ringsure",
+        kind: "website",
+        title: "What Ringsure does",
+        content:
+          "Ringsure is an AI receptionist for UK home service businesses. It answers every call 24/7, qualifies the enquiry, collects job details and sends a clean lead summary by SMS, email or Telegram. Plans: Free Pilot 7 to 14 days at no cost, Starter £49, Growth £99, Pro £149 per month. One recovered job usually covers the cost.",
+        createdAt: now,
+      },
       {
         id: "k_heat_1",
         tenantId: "heatwise",
@@ -199,6 +223,23 @@ function seed(): StoreShape {
     ],
     outreachCalls: [],
     isolationRuns: [],
+    callWindows: [
+      {
+        id: "w_outreach",
+        label: "Outreach — weekday mornings",
+        days: [1, 2, 3, 4, 5],
+        start: "08:30",
+        end: "17:00",
+        timezone: "Europe/London",
+        notBefore: (() => {
+          const date = new Date();
+          date.setDate(date.getDate() + 1);
+          date.setHours(8, 30, 0, 0);
+          return date.toISOString();
+        })(),
+        enabled: true,
+      },
+    ],
   };
 }
 
@@ -214,6 +255,7 @@ function normalise(parsed: Partial<StoreShape>): StoreShape {
     prospects: parsed.prospects ?? [],
     outreachCalls: parsed.outreachCalls ?? [],
     isolationRuns: parsed.isolationRuns ?? [],
+    callWindows: parsed.callWindows ?? [],
   };
 }
 
@@ -455,4 +497,34 @@ export async function addIsolationRun(run: Omit<IsolationRun, "id" | "ranAt">) {
   store.isolationRuns.unshift(saved);
   await writeStore(store);
   return saved;
+}
+
+export async function listCallWindows() {
+  return (await readStore()).callWindows;
+}
+
+export async function saveCallWindow(window: CallWindow) {
+  const store = await readStore();
+  const index = store.callWindows.findIndex((item) => item.id === window.id);
+  if (index === -1) store.callWindows.push(window);
+  else store.callWindows[index] = window;
+  await writeStore(store);
+  return window;
+}
+
+export async function addProspectsBulk(
+  items: { businessName: string; phone: string; contactName?: string; targetRole?: string; trade: string }[],
+) {
+  const store = await readStore();
+  const now = new Date().toISOString();
+  const created: Prospect[] = items.map((item) => ({
+    ...item,
+    notes: "",
+    status: "new",
+    id: randomUUID().slice(0, 8),
+    createdAt: now,
+  }));
+  store.prospects = [...created, ...store.prospects];
+  await writeStore(store);
+  return created;
 }

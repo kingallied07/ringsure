@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const TRADES = ["plumbing", "heating-gas", "cleaning"] as const;
+export const TRADES = ["plumbing", "heating-gas", "cleaning", "ringsure"] as const;
 export type Trade = (typeof TRADES)[number];
 
 export const QUALIFICATION_FIELDS = [
@@ -64,6 +64,7 @@ export const tradeLabels: Record<Trade, string> = {
   plumbing: "Plumbing",
   "heating-gas": "Heating & Gas",
   cleaning: "Cleaning",
+  ringsure: "Ringsure (our own desk)",
 };
 
 /** Presets are just pre-filled briefs — there is still only one brain. */
@@ -106,6 +107,25 @@ export const tradePresets: Record<Trade, Omit<BriefData, "businessName">> = {
     transferNumber: "",
     phoneNumber: "",
     calendarEnabled: true,
+  },
+  ringsure: {
+    trade: "ringsure",
+    serviceArea: ["United Kingdom"],
+    services: [
+      "24/7 call answering",
+      "Lead qualification and summaries",
+      "Emergency escalation",
+      "Calendar booking",
+    ],
+    qualificationFields: ["name", "phone", "postcode", "jobType", "urgency"],
+    emergencyRules: ["gas smell", "smell gas", "flooding", "no power", "bolt cutters"],
+    greeting: "Hi, you've reached Ringsure. How can I help?",
+    hours: "Seven days a week, 24 hours a day",
+    toneNotes:
+      "This is our own desk. Be calm, helpful and clearly an AI assistant. Explain what Ringsure does in plain language and offer a free pilot.",
+    transferNumber: "",
+    phoneNumber: "",
+    calendarEnabled: false,
   },
 };
 
@@ -154,6 +174,8 @@ export const tradePlaybooks: Record<Trade, string> = {
     "Ask the boiler make and model, whether they have heating and hot water, and how long the fault has been there. If they smell gas, suspect carbon monoxide, or anyone feels unwell: tell them to leave the property and call 999 immediately, then flag urgent. Never give gas safety advice, never suggest they inspect anything themselves, and never quote a price.",
   cleaning:
     "Ask property type and size, number of rooms or bathrooms, and preferred date. End of tenancy and deep cleans need extra detail. No emergency escalation unless the brief says so.",
+  ringsure:
+    "This is Ringsure's own line. Answer as our receptionist. Explain that we answer every call 24/7 for UK home service businesses, qualify the job and send a summary. Offer the free 7 to 14 day pilot. Never pretend to be a human.",
 };
 
 export function buildDynamicVariables(brief: Brief, callContext = ""): Record<string, string> {

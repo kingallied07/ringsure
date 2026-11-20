@@ -7,6 +7,7 @@ const tabs = [
   { href: "/dashboard", label: "Overview" },
   { href: "/dashboard/briefs", label: "Tenants" },
   { href: "/dashboard/knowledge", label: "Knowledge" },
+  { href: "/dashboard/calls", label: "Conversations" },
   { href: "/dashboard/outreach", label: "Outreach desk" },
   { href: "/dashboard/qa", label: "QA" },
   { href: "/dashboard/simulate", label: "Simulate" },

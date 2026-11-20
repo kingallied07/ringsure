@@ -16,6 +16,7 @@ export type Lead = {
 export type Call = {
   id: string;
   providerCallId?: string;
+  recordingUrl?: string;
   businessId: string;
   fromNumber: string;
   scenario: string;

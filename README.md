@@ -39,7 +39,9 @@ There's a second half to the app at **`/dashboard`** — the **owner control cen
 - **Tenants and briefs:** each business is a tenant with the same brief schema. Trade presets are just pre-filled briefs. Add tenants from `/dashboard/briefs`.
 - **Tenant knowledge:** `/dashboard/knowledge` stores approved FAQ, pricing and policy chunks per tenant. The agent calls `search_knowledge` mid-call, but tenant identity comes from a signed call context — the model cannot choose which tenant to read.
 - **Isolation checks:** `/dashboard/knowledge` runs adversarial tests (missing/tampered tokens, cross-tenant probes) to prove knowledge can't leak between businesses.
-- **Outreach desk:** `/dashboard/outreach` uses the same brain to call prospects, demo the product and offer the free pilot. It discloses that it's AI and honours do-not-call.
+- **Outreach desk:** `/dashboard/outreach` holds a named prospect list (contact name and target role), bulk import, and editable **call windows** with a "don't call before" time. Calls are blocked outside the window.
+- **Conversations:** `/dashboard/calls` lists every call with its transcript, captured lead and recording player (when Retell supplies a recording URL).
+- **Ringsure tenant:** the seeded `ringsure` tenant uses our own greeting and product knowledge — point the test number here rather than a sample trade business.
 - **QA loop:** `/dashboard/qa` tracks unanswered questions and call reviews — the raw material for improving knowledge and prompts.
 - **Simulated calls and evals:** `/dashboard/simulate` and `/dashboard/evals` run scripted callers through the real rules before any paid accounts are connected.
 

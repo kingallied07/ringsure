@@ -11,6 +11,7 @@ type RetellCall = {
   end_time?: number;
   duration_ms?: number;
   transcript?: Array<{ role?: string; content?: string }> | string;
+  recording_url?: string;
   call_analysis?: Record<string, unknown>;
   metadata?: Record<string, unknown>;
 };
@@ -114,6 +115,7 @@ export async function POST(request: Request) {
 
   const saved = await saveCall({
     providerCallId: call.call_id,
+    recordingUrl: call.recording_url,
     businessId,
     fromNumber: call.from_number ?? "",
     scenario: `Retell call ${call.call_id}`,
