@@ -101,7 +101,7 @@ async function provisionRetell(): Promise<ProvisionResult> {
     version_description: "One brain for all home service businesses; brief injected per call.",
     response_engine: { type: "retell-llm", llm_id: llm.llm_id },
     voice_id: selectedVoice,
-    voice_model: process.env.RETELL_VOICE_MODEL?.trim() || "eleven_flash_v2_5",
+    // Let Retell pick the TTS model that matches the selected voice.
     language: "en-GB",
     voice_temperature: 0.9,
     voice_speed: 1,
