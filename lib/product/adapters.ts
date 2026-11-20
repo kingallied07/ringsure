@@ -161,12 +161,15 @@ export async function registerInboundCall(input: {
     return { mode: "mock", callId, sipUri: `sip:${callId}@sip.retellai.com` };
   }
 
-  const result = await retell("/register-call", {
+  const result = await retell("/v2/register-phone-call", {
     agent_id: input.agentId,
     from_number: input.fromNumber,
     to_number: input.toNumber,
     direction: "inbound",
-    dynamic_variables: buildDynamicVariables(input.brief, mintCallContext(input.brief.id, "inbound")),
+    retell_llm_dynamic_variables: buildDynamicVariables(
+      input.brief,
+      mintCallContext(input.brief.id, "inbound"),
+    ),
     metadata: { businessId: input.brief.id },
   });
 
