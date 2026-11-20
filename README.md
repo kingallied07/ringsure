@@ -31,6 +31,18 @@ Open [http://localhost:3000](http://localhost:3000).
 - SEO metadata, Open Graph / Twitter cards, JSON-LD structured data, semantic HTML, skip link and accessible focus states
 - A visible AI disclosure in the FAQ, final CTA and footer
 
+## Product prototype (mock mode)
+
+There's a second half to the app at **`/dashboard`** — the beginning of the actual Ringsure product. It runs entirely locally with no paid accounts.
+
+- **One brain:** `lib/product/brief.ts` holds the single system prompt, tool definitions and AI disclosure. There is no per-trade agent.
+- **Structured briefs:** every business is configured with the same JSON schema. The three trade presets (plumbing, heating/gas, cleaning) are just pre-filled briefs.
+- **Simulated calls:** `lib/product/mock-brain.ts` runs six scripted callers through the real rules (disclosure, qualification fields, emergency matching, transfer/booking conditions, no invented prices). Calls and leads are stored in `.data/product.json` (gitignored) and can also notify Telegram.
+- **Eval harness:** `/dashboard/evals` runs the scripted suite against any brief and scores each check. This is the framework you'll keep when real AI calls replace the mock brain.
+- **Placeholder webhook:** `/api/webhooks/retell` acknowledges events; the real verified handler goes here.
+
+Dashboard pages: `/dashboard`, `/dashboard/briefs`, `/dashboard/briefs/[id]`, `/dashboard/simulate`, `/dashboard/evals`. They're marked `noindex`.
+
 ## Lead notifications (Telegram)
 
 The pilot form posts to `/api/pilot`, which forwards each enquiry to your Telegram chat as a formatted message.
@@ -67,7 +79,12 @@ app/
   page.tsx            Section composition
   globals.css         Tailwind v4 theme + base styles
   api/pilot/route.ts  Forwards pilot requests to Telegram
+  api/product/        Briefs, simulation, calls and eval endpoints
+  api/webhooks/       Placeholder Retell webhook
+  dashboard/          Product prototype UI (noindex)
+lib/product/          Brief schema, brain prompt, mock scenarios, store
 components/
+  dashboard/          Brief editor, simulator, eval runner
   Header.tsx  Hero.tsx  Problem.tsx  HowItWorks.tsx
   WhoFor.tsx  SocialProof.tsx  Pricing.tsx  FAQ.tsx
   FinalCTA.tsx  Footer.tsx  SampleCall.tsx

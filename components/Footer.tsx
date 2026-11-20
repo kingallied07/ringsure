@@ -8,6 +8,7 @@ const productLinks = [
 ];
 
 const companyLinks = [
+  { label: "Product demo", href: "/dashboard" },
   { label: "Start free pilot", href: "#pilot" },
   { label: "Privacy", href: "#privacy" },
   { label: "Terms", href: "#terms" },
