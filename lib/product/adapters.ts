@@ -30,6 +30,14 @@ export function voiceId() {
   return process.env.RETELL_VOICE_ID?.trim() || "11labs-Adrian";
 }
 
+function llmModel() {
+  return process.env.RETELL_MODEL?.trim() || "gpt-4.1-mini";
+}
+
+function analysisModel() {
+  return process.env.RETELL_ANALYSIS_MODEL?.trim() || "gpt-4.1-mini";
+}
+
 function hasRetellCredentials() {
   return Boolean(process.env.RETELL_API_KEY?.trim());
 }
@@ -80,12 +88,12 @@ async function provisionRetell(): Promise<ProvisionResult> {
         execution_message_description: "Let me check that for you.",
       },
     ],
-    model: "gpt-4.1-mini",
+    model: llmModel(),
     model_temperature: 0.2,
     start_speaker: "agent",
     begin_message: "{{opening_line}}",
     post_call_analysis_data: POST_CALL_ANALYSIS_FIELDS,
-    post_call_analysis_model: "gpt-4.1-mini",
+    post_call_analysis_model: analysisModel(),
   });
 
   const agent = await retell("/create-agent", {
