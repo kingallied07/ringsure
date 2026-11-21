@@ -66,6 +66,8 @@ async function handleOutboundResult(
   const analysis = call.call_analysis;
   const transcript = parse(call.transcript);
   const outcome = read(analysis, "outcome") || "Call completed";
+  const openerId = read(analysis, "opener_id");
+  const engaged = read(analysis, "engaged").toLowerCase() === "yes";
   const doNotCall = read(analysis, "do_not_call").toLowerCase() === "yes";
   const nextStep = read(analysis, "next_step");
   const notes = read(analysis, "notes");
@@ -83,6 +85,8 @@ async function handleOutboundResult(
     await updateOutreachCall(outreachCallId, {
       providerCallId: callId,
       recordingUrl: call.recording_url,
+      openerId: openerId || undefined,
+      engaged,
       status: "completed",
       outcome,
       summary,

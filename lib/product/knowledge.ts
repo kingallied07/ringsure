@@ -1,5 +1,50 @@
 import type { Trade } from "./brief";
 
+/**
+ * Approved outbound openers. The assistant must choose from these (adapting names only) —
+ * it may not invent a line that conceals who is calling. Each variant is measured for retention.
+ */
+export const OPENER_VARIANTS = [
+  {
+    id: "problem",
+    label: "Problem-first question",
+    line: "Hi {{prospect_name}}, it's Sam from Ringsure — quick one: when you're out on a job, what happens to the calls you can't answer?",
+  },
+  {
+    id: "stat",
+    label: "One specific number",
+    line: "Hi {{prospect_name}}, Sam from Ringsure. Most trades miss around half their calls while on site — is that you as well?",
+  },
+  {
+    id: "value",
+    label: "Direct value",
+    line: "Hi {{prospect_name}}, Sam here. I help local trades stop losing jobs to voicemail — got 30 seconds?",
+  },
+  {
+    id: "curiosity",
+    label: "Curiosity hook",
+    line: "Hi {{prospect_name}}, Sam from Ringsure. I was just looking at {{business_name}} — can I ask you something odd?",
+  },
+] as const;
+
+export type OpenerId = (typeof OPENER_VARIANTS)[number]["id"];
+
+/** Deterministic rotation so each prospect gets a consistent, evenly spread variant. */
+export function chooseOpener(seed: string): (typeof OPENER_VARIANTS)[number] {
+  const sum = Array.from(seed || "ringsure").reduce((total, char) => total + char.charCodeAt(0), 0);
+  return OPENER_VARIANTS[sum % OPENER_VARIANTS.length];
+}
+
+export function renderOpener(template: string, prospectName: string, businessName: string) {
+  return template
+    .replaceAll("{{prospect_name}}", prospectName.trim() || "there")
+    .replaceAll("{{business_name}}", businessName.trim() || "your business");
+}
+
+/** Said after the prospect's first reply — early enough to be fair, late enough not to kill the call. */
+export const OUTBOUND_DISCLOSURE =
+  "Small thing — I'm an AI assistant, not someone in your office, so you know who you're talking to. I'll keep this short.";
+
 /** The facts the assistant is allowed to use when answering about Ringsure itself. */
 export const RINGSURE_FACT_SHEET = `ABOUT RINGSURE
 - Ringsure is an AI receptionist for UK home service businesses: plumbers, electricians, cleaners, heating and gas engineers, property managers, handymen and locksmiths.

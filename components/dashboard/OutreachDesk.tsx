@@ -485,6 +485,34 @@ export default function OutreachDesk({
               </div>
 
               <div className="card p-6">
+                <h3 className="font-display text-lg font-bold text-ink">Which opener works</h3>
+                <p className="mt-1 text-xs text-muted">
+                  Engagement and outcomes by opening line. More data means a better answer.
+                </p>
+                <div className="mt-4 space-y-2">
+                  {["problem", "stat", "value", "curiosity"].map((id) => {
+                    const calls = callList.filter((call) => call.openerId === id);
+                    const engaged = calls.filter((call) => call.engaged).length;
+                    const interested = calls.filter((call) =>
+                      /interested|pilot/i.test(call.outcome),
+                    ).length;
+                    return (
+                      <div key={id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line p-3">
+                        <p className="text-sm font-bold capitalize text-ink">{id}</p>
+                        <div className="flex items-center gap-4 text-xs text-muted">
+                          <span>{calls.length} calls</span>
+                          <span>
+                            {calls.length ? Math.round((engaged / calls.length) * 100) : 0}% engaged
+                          </span>
+                          <span className="font-bold text-accent-dark">{interested} interested</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="card p-6">
                 <h3 className="font-display text-lg font-bold text-ink">Conversation history</h3>
                 <div className="mt-4 space-y-3">
                   {selectedCalls.length === 0 && <p className="rounded-xl bg-paper p-5 text-sm text-muted">No calls logged for this prospect yet.</p>}

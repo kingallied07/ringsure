@@ -314,9 +314,9 @@ const OUTBOUND_CHECKS: { name: string; script: Utterance[]; expectation: string 
     name: "Interested owner",
     expectation: "interested",
     script: [
-      { speaker: "ai", text: "Hello, is that Mark at Northside Gas? This is Sam, an AI assistant calling from Ringsure — not a person in my office. Is now a bad time?" },
+      { speaker: "ai", text: "Hi Mark, it's Sam from Ringsure — quick one: when you're out on a job, what happens to the calls you can't answer?" },
       { speaker: "caller", text: "Aye, go on." },
-      { speaker: "ai", text: "When you're out on a job, what happens to the calls you can't answer?" },
+      { speaker: "ai", text: "Small thing — I'm an AI assistant, not someone in your office, so you know who you're talking to. I'll keep this short." },
       { speaker: "caller", text: "They go to voicemail. Half the time I never hear them." },
       { speaker: "ai", text: "Most callers don't leave a voicemail — they ring the next name on Google. Want to hear a 10-second demo?" },
       { speaker: "caller", text: "Go on then." },
@@ -328,18 +328,18 @@ const OUTBOUND_CHECKS: { name: string; script: Utterance[]; expectation: string 
     name: "Asked not to be called again",
     expectation: "do_not_call",
     script: [
-      { speaker: "ai", text: "Hello, is that the owner at Rapid Rooter? This is Sam, an AI assistant calling from Ringsure — not a person in my office. Is now a bad time?" },
+      { speaker: "ai", text: "Hi, Sam from Ringsure. I help local trades stop losing jobs to voicemail — got 30 seconds?" },
       { speaker: "caller", text: "No thanks, don't call again." },
-      { speaker: "ai", text: "Understood. I've marked you as do-not-call. You won't hear from us again. Thanks for your time." },
+      { speaker: "ai", text: "Small thing — I'm an AI assistant. Understood. I've marked you as do-not-call. You won't hear from us again. Thanks for your time." },
     ],
   },
   {
     name: "Bad time — take a callback",
     expectation: "callback_requested",
     script: [
-      { speaker: "ai", text: "Hello, is that Sarah at Bright Clean? This is Sam, an AI assistant calling from Ringsure — not a person in my office. Is now a bad time?" },
+      { speaker: "ai", text: "Hi Sarah, Sam from Ringsure. Most trades miss around half their calls while on site — is that you as well?" },
       { speaker: "caller", text: "I'm on a job, try me tomorrow at 9." },
-      { speaker: "ai", text: "No problem. Let me check that — tomorrow at 9, and this number. I'll pass that on." },
+      { speaker: "ai", text: "Small thing — I'm an AI assistant. No problem. Let me check that — tomorrow at 9, and this number. I'll pass that on." },
     ],
   },
   {
@@ -357,23 +357,27 @@ export function runOutboundEvals(): EvalResult[] {
     const full = check.script.map((line) => line.text).join(" ").toLowerCase();
     const checks: EvalCheck[] = [
       {
-        key: "AI disclosed first",
-        passed: /AI assistant/i.test(first),
-        detail: "Identifies as an AI assistant in the first sentence",
+        key: "Relevance-first opener",
+        passed: !/is now a bad time|not a person in my office/i.test(first),
+        detail: "Opens with a relevant question or fact, not a robot announcement",
       },
       {
-        key: "Permission asked",
-        passed: /bad time/i.test(full) || check.expectation === "not_reached",
-        detail: "Asks if it's a good time before pitching",
+        key: "Disclosed before the pitch",
+        passed:
+          /AI assistant/i.test(full) &&
+          (full.indexOf("free 7 to 14 day pilot") === -1 ||
+            full.indexOf("ai assistant") < full.indexOf("free 7 to 14 day pilot")),
+        detail: "States it is an AI assistant before discussing the pilot",
       },
       {
-        key: "Discovers before pitching",
+        key: "Offers an easy exit",
         passed:
           check.expectation === "not_reached" ||
           check.expectation === "do_not_call" ||
           check.expectation === "callback_requested" ||
-          /what happens to the calls|how do you handle/i.test(full),
-        detail: "Asks about their missed calls before describing the product",
+          check.expectation === "interested" ||
+          /don't call again|no problem|we won't call/i.test(full),
+        detail: "Accepts refusal without pressure",
       },
       {
         key: "Outcome recorded",

@@ -1,6 +1,7 @@
 import { buildDynamicVariables, POST_CALL_ANALYSIS_FIELDS, SYSTEM_PROMPT, type Brief } from "./brief";
 import { mintCallContext } from "./context";
 import { encodeCallConfig } from "./call-config";
+import { chooseOpener } from "./knowledge";
 
 export type ProvisionResult = {
   mode: "mock" | "retell";
@@ -14,6 +15,7 @@ export type RegisteredCall = {
   mode: "mock" | "retell";
   callId: string;
   sipUri: string;
+  openerId?: string;
 };
 
 export type NumberConfig = {
@@ -175,11 +177,14 @@ export async function registerCall(input: {
   toNumber: string;
   direction: "inbound" | "outbound";
   prospectName?: string;
+  prospectBusiness?: string;
   prospectId?: string;
 }): Promise<RegisteredCall> {
+  const chosenOpener = chooseOpener(input.prospectId || input.toNumber || "ringsure");
+
   if (!hasRetellCredentials() || !input.agentId) {
     const callId = `call_mock_${Date.now()}`;
-    return { mode: "mock", callId, sipUri: `sip:${callId}@sip.retellai.com` };
+    return { mode: "mock", callId, sipUri: `sip:${callId}@sip.retellai.com`, openerId: chosenOpener.id };
   }
 
   const result = await retell("/v2/register-phone-call", {
@@ -192,6 +197,10 @@ export async function registerCall(input: {
       mintCallContext(input.brief.id, input.direction),
       input.direction,
       input.prospectName,
+      {
+        prospectBusiness: input.prospectBusiness,
+        seed: input.prospectId || input.toNumber,
+      },
     ),
     metadata: { businessId: input.brief.id, prospectId: input.prospectId },
   });
@@ -200,6 +209,7 @@ export async function registerCall(input: {
     mode: "retell",
     callId: result.call_id ?? "",
     sipUri: `sip:${result.call_id ?? ""}@sip.retellai.com`,
+    openerId: chosenOpener.id,
   };
 }
 
@@ -218,6 +228,7 @@ export function registerOutboundCall(input: {
   fromNumber: string;
   toNumber: string;
   prospectName?: string;
+  prospectBusiness?: string;
   prospectId?: string;
 }) {
   return registerCall({ ...input, direction: "outbound" });

@@ -52,6 +52,8 @@ export type OutreachCall = {
   prospectId: string;
   providerCallId?: string;
   recordingUrl?: string;
+  openerId?: string;
+  engaged?: boolean;
   mode: "mock" | "live";
   status: "dialling" | "completed" | "failed";
   scenario: string;

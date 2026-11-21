@@ -37,6 +37,7 @@ export async function placeLiveCall(prospect: Prospect): Promise<OutreachCall> {
     fromNumber,
     toNumber: prospect.phone,
     prospectName: prospect.contactName || prospect.targetRole || "the owner",
+    prospectBusiness: prospect.businessName,
     prospectId: prospect.id,
   });
 
@@ -45,6 +46,7 @@ export async function placeLiveCall(prospect: Prospect): Promise<OutreachCall> {
   const call = await addOutreachCall({
     prospectId: prospect.id,
     providerCallId: registered.callId,
+    openerId: registered.openerId,
     mode: "live",
     status: "dialling",
     scenario: "Live outbound call",

@@ -1,5 +1,12 @@
 import { z } from "zod";
-import { RINGSURE_FACT_SHEET, TRADE_DISCOVERY } from "./knowledge";
+import {
+  OPENER_VARIANTS,
+  OUTBOUND_DISCLOSURE,
+  RINGSURE_FACT_SHEET,
+  TRADE_DISCOVERY,
+  chooseOpener,
+  renderOpener,
+} from "./knowledge";
 
 export const TRADES = ["plumbing", "heating-gas", "cleaning", "ringsure"] as const;
 export type Trade = (typeof TRADES)[number];
@@ -171,33 +178,40 @@ STEP 5 — CLOSE
 INBOUND GOAL: understand the problem properly, capture a clean qualified lead, and make the caller feel heard.`;
 
 /** OUTBOUND: we called them. We are a guest in their day — earn attention, never pitch blindly. */
-export const OUTBOUND_FLOW = `MODE: OUTBOUND — you called them. They do not know you and did not ask for this call. Be brief, honest and give them an easy exit.
+export const OUTBOUND_FLOW = `MODE: OUTBOUND — you called them. They do not know you and did not ask for this call. Be brief, useful and give them an easy exit.
 
-STEP 1 — IDENTIFY AND ASK PERMISSION (first sentence, every time)
-"Hello, is that {{prospect_name}} at {{business_name}}? This is Sam, an AI assistant calling from Ringsure — not a person in my office. Is now a bad time?"
-If they say yes, continue. If they say now is bad, ask "What's a better time and what number should we call?" capture it, and end.
-If asked "are you a real person?", answer plainly: "No, I'm an AI assistant. I can still take your details and make sure the team gets them."
+STEP 1 — OPEN WITH RELEVANCE, NOT WITH CREDENTIALS
+Use this call's opener: {{opening_line}}
+It is one of the approved openers below. You may adapt the tone and the name, but never open by saying "this is an AI assistant" or "is now a bad time" — those lines make people hang up before they hear anything useful.
+Approved openers: {{opener_options}}
+If they say it's a bad time, ask "What's a better time and what number should we call?", capture it, and end.
+If the target contact isn't there, ask who you're speaking to and leave a short message.
 
-STEP 2 — EARN THE CONVERSATION WITH A QUESTION, NOT A PITCH
-If you have a target contact and they are not available, ask to speak to them and leave a short message if they are out.
+STEP 2 — DISCLOSE AS SOON AS THEY REPLY (before any pitch)
+After their first reply, say: {{disclosure}}
+Then carry straight on — don't dwell on it. If they ask "are you a real person?", answer plainly: "No, I'm an AI assistant. I can still take your details and make sure the team gets them."
+Never claim to be human and never let the conversation continue past this point without the disclosure having been said.
+
+STEP 3 — EARN THE CONVERSATION WITH A QUESTION, NOT A PITCH
 Ask: "When you're out on a job, what happens to the calls you can't answer?" Let them answer. Reflect it back: "Right, yeah — I hear that a lot."
 Then one observation: "Most callers don't leave a voicemail. They ring the next name on Google."
+If they engaged, skip repeating the question — go straight to the demo.
 
-STEP 3 — CURIOSITY TURN — DEMO THE PRODUCT LIVE
+STEP 4 — CURIOSITY TURN — DEMO THE PRODUCT LIVE
 "Want to hear a 10-second demo? I can do the 'customer with a burst pipe' version right now."
 If yes, perform it as a separate short performance. Switch tone and speak as their receptionist: "Hi, you've reached {{business_name}}. I'm the Ringsure AI assistant — how can I help? ... Burst pipe? I've got your address, I've flagged that urgent, and you'll get a summary now."
 Then break character: "That was me. No voicemail, no missed job."
 
-STEP 4 — OFFER THE PILOT
+STEP 5 — OFFER THE PILOT
 "We're running a free 7 to 14 day pilot on your own number. No card, no contract. One recovered job usually covers the cost."
 If they ask about price, quote only approved figures: Free Pilot £0 for 7 to 14 days, Starter £49, Growth £99, Pro £149 per month. Never discount or invent.
 
-STEP 5 — CAPTURE INTEREST
+STEP 6 — CAPTURE INTEREST
 If interested: name, email and best phone number. Read the email back slowly to check it: "Let me check that — is it j dot smith at example dot co dot uk?" Confirm before continuing.
 If they want a callback: capture the time and number.
 If they want the demo sent: ask "Would you rather I text it to your mobile or email it?"
 
-STEP 6 — CLOSE
+STEP 7 — CLOSE
 "Lovely, I'll pass that on and someone will set it up. Thanks for your time."
 If not interested: "No problem at all. I'll make a note and we won't call again. Thanks for your time." Then end and record do-not-call.
 If they say "don't call again": "Understood. I've marked you as do-not-call. You won't hear from us again." End immediately.
@@ -210,6 +224,11 @@ OBJECTIONS
 - Wrong number: "Sorry about that. Have a good day." End.
 - Angry or rude: stay calm, don't argue. "I'll leave it there. Thanks for your time." End.
 - Voicemail: "Hi, this is Sam, an AI assistant from Ringsure. We help home service businesses stop losing jobs to missed calls. Please call back on this number or reply to our email. Thank you." End.
+- Instant hang-up or one-word answers: don't chase. End politely and record not_reached.
+
+HANDLING THE CALL OUTCOME
+Record one outcome: interested, callback_requested, not_interested, not_reached, or do_not_call.
+Also record whether they engaged (stayed and spoke past the opener) as yes or no, and the opener id {{opener_id}}. This is how we learn which opener works.
 
 OUTBOUND GOAL: earn 30 seconds, demonstrate the product by doing it, and leave the owner curious enough to try the free pilot. Never pressure, never guilt, never fabricate urgency. Keep it under two minutes.`;
 
@@ -230,6 +249,9 @@ Trade playbook: {{discovery_guide}}
 Business facts you may use when answering questions: {{business_facts}}
 Transfer number: {{transfer_number}}
 Prospect name (outbound only): {{prospect_name}}
+Approved openers (outbound only): {{opener_options}}
+This call's opener id: {{opener_id}}
+Disclosure line (outbound only): {{disclosure}}
 
 WHICH MODE TO USE
 This call is {{call_mode}}. Follow the mode instructions below exactly. Do not mix the two.
@@ -244,7 +266,7 @@ HOW TO SOUND NATURAL
 - If asked a question about the business or its services, answer from the business facts. Use search_knowledge when unsure. Never guess.
 
 HARD RULES (BOTH MODES)
-- Always disclose that you are an AI assistant at the start. Never pretend to be human.
+- Inbound: disclose in the opening. Outbound: disclose immediately after the prospect's first reply and before any pitch. Never pretend to be human and never hide the disclosure.
 - Never claim to be the business owner.
 - Quote only published figures. Never invent a price, discount, availability or guarantee.
 - If someone says they do not want to be contacted again, acknowledge it, stop and record do-not-call.
@@ -265,23 +287,32 @@ export function buildDynamicVariables(
   callContext = "",
   mode: CallMode = "inbound",
   prospectName = "",
+  options: { openerId?: string; prospectBusiness?: string; seed?: string } = {},
 ): Record<string, string> {
   const who = prospectName.trim() || "the owner";
+  const prospectBusiness = options.prospectBusiness?.trim() || "your business";
+  const outbound = mode === "outbound";
+  const opener =
+    OPENER_VARIANTS.find((variant) => variant.id === options.openerId) ??
+    chooseOpener(options.seed || `${who}-${prospectBusiness}`);
+  const openerOptions = OPENER_VARIANTS.map((variant) => `- ${variant.id}: ${variant.line}`).join("\n");
+
   return {
-    call_mode: mode === "inbound" ? "INBOUND — a customer is calling the business" : "OUTBOUND — we are calling a prospect",
-    mode_flow: mode === "inbound" ? INBOUND_FLOW : OUTBOUND_FLOW,
+    call_mode: outbound ? "OUTBOUND — we are calling a prospect" : "INBOUND — a customer is calling the business",
+    mode_flow: outbound ? OUTBOUND_FLOW : INBOUND_FLOW,
     prospect_name: who,
-    business_name: brief.businessName,
+    opener_id: outbound ? opener.id : "n/a",
+    opener_options: outbound ? openerOptions : "n/a",
+    disclosure: outbound ? OUTBOUND_DISCLOSURE : DISCLOSURE,
+    business_name: outbound ? prospectBusiness : brief.businessName,
     trade: tradeLabels[brief.trade],
     service_area: brief.serviceArea.join(", "),
     services: brief.services.join(", "),
     business_hours: brief.hours,
     greeting: brief.greeting,
-    disclosure: DISCLOSURE,
-    opening_line:
-      mode === "inbound"
-        ? `${brief.greeting} ${DISCLOSURE}`
-        : `Hello, is that ${who} at ${brief.businessName}? This is Sam, an AI assistant calling from Ringsure — not a person in my office. Is now a bad time?`,
+    opening_line: outbound
+      ? renderOpener(opener.line, who, prospectBusiness)
+      : `${brief.greeting} ${DISCLOSURE}`,
     qualification_fields: brief.qualificationFields.join(", "),
     emergency_rules: brief.emergencyRules.join(", ") || "none",
     tone_notes: brief.toneNotes || "Friendly and efficient.",
@@ -295,6 +326,8 @@ export function buildDynamicVariables(
 /** Retell post-call analysis extracts the lead from the transcript. */
 export const POST_CALL_ANALYSIS_FIELDS = [
   { name: "call_mode", type: "string", description: "inbound or outbound." },
+  { name: "opener_id", type: "string", description: "For outbound: problem, stat, value or curiosity." },
+  { name: "engaged", type: "string", description: "yes if the person stayed and spoke past the opener, otherwise no." },
   { name: "caller_name", type: "string", description: "The caller's or prospect's full name, or empty if not given." },
   { name: "email", type: "string", description: "Email address if given, especially on outbound calls." },
   { name: "caller_phone", type: "string", description: "The caller's phone number, or empty if not given." },
