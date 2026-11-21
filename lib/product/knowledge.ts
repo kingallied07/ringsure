@@ -29,6 +29,37 @@ export const OPENER_VARIANTS = [
 
 export type OpenerId = (typeof OPENER_VARIANTS)[number]["id"];
 
+/** Inbound callers already chose to call us — get to the point and still be upfront. */
+export const INBOUND_OPENERS = [
+  {
+    id: "direct",
+    label: "Straight to the problem",
+    line: "Hi, you've reached {{business_name}}. I'm not a real person, but I can take your details — what's the problem?",
+  },
+  {
+    id: "helpful",
+    label: "Warm and helpful",
+    line: "Hi, {{business_name}} here. Quick thing — I'm not a real person, but I'm here to help. What's going on?",
+  },
+  {
+    id: "urgent",
+    label: "Urgency first",
+    line: "Hi, you've reached {{business_name}}. I'm not a real person, but I can get this to the team — is it urgent?",
+  },
+  {
+    id: "simple",
+    label: "Minimal",
+    line: "Hi, {{business_name}}. I'm not a real person, I can still help — what's happened?",
+  },
+] as const;
+
+export type InboundOpenerId = (typeof INBOUND_OPENERS)[number]["id"];
+
+export function chooseInboundOpener(seed: string): (typeof INBOUND_OPENERS)[number] {
+  const sum = Array.from(seed || "inbound").reduce((total, char) => total + char.charCodeAt(0), 0);
+  return INBOUND_OPENERS[sum % INBOUND_OPENERS.length];
+}
+
 /** Deterministic rotation so each prospect gets a consistent, evenly spread variant. */
 export function chooseOpener(seed: string): (typeof OPENER_VARIANTS)[number] {
   const sum = Array.from(seed || "ringsure").reduce((total, char) => total + char.charCodeAt(0), 0);

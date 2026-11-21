@@ -71,6 +71,28 @@ export default function CallLibrary({
             ))}
           </div>
 
+          <div className="card p-6">
+            <h2 className="font-display text-lg font-bold text-ink">Which opener works</h2>
+            <p className="mt-1 text-xs text-muted">Calls and engagement by opening line.</p>
+            <div className="mt-4 grid gap-2 sm:grid-cols-2">
+              {["direct", "helpful", "urgent", "simple", "problem", "stat", "value", "curiosity"].map((id) => {
+                const matching = calls.filter((call) => call.openerId === id);
+                if (!matching.length) return null;
+                const engaged = matching.filter((call) => call.engaged).length;
+                const leads = matching.filter((call) => call.lead).length;
+                return (
+                  <div key={id} className="rounded-xl border border-line p-3">
+                    <p className="text-sm font-bold capitalize text-ink">{id}</p>
+                    <p className="mt-1 text-xs text-muted">
+                      {matching.length} calls · {matching.length ? Math.round((engaged / matching.length) * 100) : 0}% engaged · {leads} leads
+                    </p>
+                  </div>
+                );
+              })}
+              {calls.length === 0 && <p className="text-sm text-muted">No calls yet.</p>}
+            </div>
+          </div>
+
           {selected && (
             <div className="space-y-5">
               <div className="card p-6">

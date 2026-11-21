@@ -192,6 +192,8 @@ export async function POST(request: Request) {
   const saved = await saveCall({
     providerCallId: call.call_id,
     recordingUrl: call.recording_url,
+    openerId: analysisValue(analysis, "opener_id") || undefined,
+    engaged: analysisValue(analysis, "engaged").toLowerCase() === "yes",
     businessId,
     fromNumber: call.from_number ?? "",
     scenario: `Retell call ${call.call_id}`,

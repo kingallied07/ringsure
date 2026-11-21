@@ -1,7 +1,7 @@
 import { buildDynamicVariables, POST_CALL_ANALYSIS_FIELDS, SYSTEM_PROMPT, type Brief } from "./brief";
 import { mintCallContext } from "./context";
 import { encodeCallConfig } from "./call-config";
-import { chooseOpener } from "./knowledge";
+import { chooseInboundOpener, chooseOpener } from "./knowledge";
 
 export type ProvisionResult = {
   mode: "mock" | "retell";
@@ -180,7 +180,9 @@ export async function registerCall(input: {
   prospectBusiness?: string;
   prospectId?: string;
 }): Promise<RegisteredCall> {
-  const chosenOpener = chooseOpener(input.prospectId || input.toNumber || "ringsure");
+  const openerSeed = input.prospectId || input.toNumber || input.fromNumber || "ringsure";
+  const chosenOpener =
+    input.direction === "inbound" ? chooseInboundOpener(openerSeed) : chooseOpener(openerSeed);
 
   if (!hasRetellCredentials() || !input.agentId) {
     const callId = `call_mock_${Date.now()}`;

@@ -1,4 +1,5 @@
-import { DISCLOSURE, type Brief } from "./brief";
+import { type Brief } from "./brief";
+import { chooseInboundOpener, renderOpener } from "./knowledge";
 import type { Call, EvalCheck, EvalResult, Lead, Utterance } from "./types";
 
 export type Scenario = {
@@ -194,7 +195,11 @@ export function runMockCall(
   fromNumberOverride?: string,
 ): Omit<Call, "id"> {
   const scenario = scenarios.find((s) => s.id === scenarioId) ?? scenarios[0];
-  const opening: Utterance = { speaker: "ai", text: `${brief.greeting} ${DISCLOSURE}` };
+  const variant = chooseInboundOpener(fromNumberOverride || scenario.fromNumber || brief.id);
+  const opening: Utterance = {
+    speaker: "ai",
+    text: renderOpener(variant.line, "", brief.businessName),
+  };
   const transcript = [opening, ...scenario.script];
   const callerText = transcript
     .filter((u) => u.speaker === "caller")
@@ -203,7 +208,7 @@ export function runMockCall(
     .toLowerCase();
 
   const emergencyFlagged = brief.emergencyRules.some((rule) => callerText.includes(rule.toLowerCase()));
-  const disclosed = opening.text.includes("AI assistant");
+  const disclosed = /not a real person|AI assistant/i.test(opening.text);
 
   const detail = scenario.provided;
   const lead: Lead | null =
@@ -224,6 +229,8 @@ export function runMockCall(
 
   return {
     businessId: brief.id,
+    openerId: variant.id,
+    engaged: true,
     fromNumber: fromNumberOverride || scenario.fromNumber,
     scenario: scenario.label,
     startedAt: started.toISOString(),
@@ -257,6 +264,11 @@ export function runEvals(brief: Brief): EvalResult[] {
     const call = runMockCall(brief, scenario.id);
     const tooSoon = askedForDetailsTooSoon(call.transcript);
     const checks = [
+      {
+        key: "Short opener",
+        passed: (call.transcript[0]?.text.length ?? 999) < 170,
+        detail: "Gets to the point without a long preamble",
+      },
       {
         key: "Problem before details",
         passed: !tooSoon,

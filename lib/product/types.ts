@@ -17,6 +17,8 @@ export type Call = {
   id: string;
   providerCallId?: string;
   recordingUrl?: string;
+  openerId?: string;
+  engaged?: boolean;
   businessId: string;
   fromNumber: string;
   scenario: string;

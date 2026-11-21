@@ -1,9 +1,11 @@
 import { z } from "zod";
 import {
+  INBOUND_OPENERS,
   OPENER_VARIANTS,
   OUTBOUND_DISCLOSURE,
   RINGSURE_FACT_SHEET,
   TRADE_DISCOVERY,
+  chooseInboundOpener,
   chooseOpener,
   renderOpener,
 } from "./knowledge";
@@ -159,9 +161,11 @@ export const INBOUND_FLOW = `MODE: INBOUND — they called you. Your job is to h
 THE MOST IMPORTANT RULE — UNDERSTAND THE PROBLEM BEFORE ANYTHING ELSE
 Do NOT ask for the caller's name, phone number, postcode or address until you understand why they called. A real receptionist asks what the problem is first. If you collect contact details before the problem, you have failed this call.
 
-STEP 1 — OPEN
-Say the greeting, then immediately the disclosure: {{disclosure}}. Never skip it.
-Example: "Hi, you've reached the heating team. Before we go on, I should let you know I'm an AI assistant working for the team, not a person in the office. I can still take your details and make sure they get them. What's the problem?"
+STEP 1 — OPEN SHORT AND GET TO THE POINT
+Use this call's opener: {{opening_line}}
+It is one of the approved openers below. Adapt the name and tone, but never add a long explanation about yourself — the caller has a problem and wants help.
+Approved openers: {{opener_options}}
+If asked "are you a real person?" or "are you AI?", answer plainly: "No — I'm an AI assistant. I can still take your details and make sure the team gets them." Never dodge the question or claim to be human.
 
 STEP 2 — DISCOVER THE PROBLEM (before collecting details)
 Ask "What's the problem?" or "What can I help with?" Let them explain without interrupting. Follow the trade playbook with two to four short follow-ups. Repeat back what you heard: "Right, so the boiler's lost pressure and there's no hot water — is that right?"
@@ -241,7 +245,7 @@ Trade: {{trade}}
 Service area: {{service_area}}
 Services: {{services}}
 Opening hours: {{business_hours}}
-Greeting (inbound only): {{greeting}}
+Greeting (reference only): {{greeting}}
 Qualification fields: {{qualification_fields}}
 Emergency triggers: {{emergency_rules}}
 Tone notes: {{tone_notes}}
@@ -249,7 +253,7 @@ Trade playbook: {{discovery_guide}}
 Business facts you may use when answering questions: {{business_facts}}
 Transfer number: {{transfer_number}}
 Prospect name (outbound only): {{prospect_name}}
-Approved openers (outbound only): {{opener_options}}
+Approved openers for this call: {{opener_options}}
 This call's opener id: {{opener_id}}
 Disclosure line (outbound only): {{disclosure}}
 
@@ -292,17 +296,20 @@ export function buildDynamicVariables(
   const who = prospectName.trim() || "the owner";
   const prospectBusiness = options.prospectBusiness?.trim() || "your business";
   const outbound = mode === "outbound";
-  const opener =
-    OPENER_VARIANTS.find((variant) => variant.id === options.openerId) ??
-    chooseOpener(options.seed || `${who}-${prospectBusiness}`);
-  const openerOptions = OPENER_VARIANTS.map((variant) => `- ${variant.id}: ${variant.line}`).join("\n");
+  const seed = options.seed || `${who}-${prospectBusiness}`;
+  const opener = outbound
+    ? OPENER_VARIANTS.find((variant) => variant.id === options.openerId) ?? chooseOpener(seed)
+    : INBOUND_OPENERS.find((variant) => variant.id === options.openerId) ?? chooseInboundOpener(seed);
+  const openerOptions = (outbound ? OPENER_VARIANTS : INBOUND_OPENERS)
+    .map((variant) => `- ${variant.id}: ${variant.line}`)
+    .join("\n");
 
   return {
     call_mode: outbound ? "OUTBOUND — we are calling a prospect" : "INBOUND — a customer is calling the business",
     mode_flow: outbound ? OUTBOUND_FLOW : INBOUND_FLOW,
     prospect_name: who,
-    opener_id: outbound ? opener.id : "n/a",
-    opener_options: outbound ? openerOptions : "n/a",
+    opener_id: opener.id,
+    opener_options: openerOptions,
     disclosure: outbound ? OUTBOUND_DISCLOSURE : DISCLOSURE,
     business_name: outbound ? prospectBusiness : brief.businessName,
     trade: tradeLabels[brief.trade],
@@ -310,9 +317,11 @@ export function buildDynamicVariables(
     services: brief.services.join(", "),
     business_hours: brief.hours,
     greeting: brief.greeting,
-    opening_line: outbound
-      ? renderOpener(opener.line, who, prospectBusiness)
-      : `${brief.greeting} ${DISCLOSURE}`,
+    opening_line: renderOpener(
+      opener.line,
+      outbound ? who : who,
+      outbound ? prospectBusiness : brief.businessName,
+    ),
     qualification_fields: brief.qualificationFields.join(", "),
     emergency_rules: brief.emergencyRules.join(", ") || "none",
     tone_notes: brief.toneNotes || "Friendly and efficient.",
