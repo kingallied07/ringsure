@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import {
   addProspect,
   addProspectsBulk,
+  dedupeProspects,
   deleteProspect,
   listProspects,
   updateProspect,
@@ -22,11 +23,17 @@ export async function POST(request: Request) {
     notes?: string;
     status?: Prospect["status"];
     items?: { businessName: string; phone: string; contactName?: string; targetRole?: string; trade: string }[];
+    dedupe?: boolean;
   };
   try {
     body = (await request.json()) as typeof body;
   } catch {
     return NextResponse.json({ error: "Invalid request" }, { status: 400 });
+  }
+
+  if (body.dedupe) {
+    const result = await dedupeProspects();
+    return NextResponse.json({ ok: true, ...result });
   }
 
   if (Array.isArray(body.items) && body.items.length) {

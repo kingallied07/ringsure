@@ -120,7 +120,7 @@ let memoryOnly = false;
 
 async function blobStore() {
   const { getStore } = await import("@netlify/blobs");
-  return getStore("ringsure-product");
+  return getStore("ringsure-product", { consistency: "strong" });
 }
 
 function withTimeout<T>(promise: Promise<T>, ms = 4000): Promise<T> {
@@ -275,8 +275,7 @@ async function readStore(): Promise<StoreShape> {
       return fresh;
     } catch (error) {
       console.error("Netlify Blobs read failed:", error);
-      if (!memory) memory = seed();
-      return memory;
+      throw new Error("Shared store unavailable — refusing to serve stale data");
     }
   }
 
@@ -299,7 +298,7 @@ async function writeStore(store: StoreShape) {
       await withTimeout(blobs.setJSON("product", store));
     } catch (error) {
       console.error("Netlify Blobs write failed:", error);
-      memoryOnly = true;
+      throw new Error("Shared store write failed — refusing to report success");
     }
     return;
   }
@@ -518,6 +517,24 @@ export async function updateProspect(
 
 export async function updateProspectStatus(id: string, status: Prospect["status"]) {
   return updateProspect(id, { status });
+}
+
+export async function dedupeProspects() {
+  const store = await readStore();
+  const seen = new Set<string>();
+  const kept: Prospect[] = [];
+
+  for (const prospect of store.prospects) {
+    const key = prospect.businessName.trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+    if (seen.has(key)) continue;
+    seen.add(key);
+    kept.push(prospect);
+  }
+
+  const removed = store.prospects.length - kept.length;
+  store.prospects = kept;
+  if (removed > 0) await writeStore(store);
+  return { removed, remaining: kept.length };
 }
 
 export async function deleteProspect(id: string) {
