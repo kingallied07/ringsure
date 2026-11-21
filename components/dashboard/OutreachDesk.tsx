@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import type { CallWindow, OutreachCall, Prospect } from "@/lib/product/store";
+import type { BatchState, CallWindow, OutreachCall, Prospect } from "@/lib/product/store";
 
 const inputClass =
   "w-full rounded-xl border border-line bg-white px-3.5 py-2.5 text-sm text-ink focus:border-accent focus:outline-none";
@@ -23,11 +23,13 @@ export default function OutreachDesk({
   prospects,
   calls,
   initialWindows,
+  initialBatch,
   scenarios,
 }: {
   prospects: Prospect[];
   calls: OutreachCall[];
   initialWindows: CallWindow[];
+  initialBatch: BatchState;
   scenarios: { id: string; label: string; description: string }[];
 }) {
   const router = useRouter();
@@ -49,6 +51,7 @@ export default function OutreachDesk({
   const [newProspect, setNewProspect] = useState({ businessName: "", phone: "", contactName: "", targetRole: "owner", trade: "Heating & Gas" });
   const [bulkText, setBulkText] = useState("");
   const [windows, setWindows] = useState(initialWindows);
+  const [batch, setBatch] = useState(initialBatch);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -245,6 +248,48 @@ export default function OutreachDesk({
     return () => clearInterval(timer);
   }, [selectedId, callList]);
 
+  async function toggleBatch() {
+    setBusy(true);
+    setMessage(null);
+    try {
+      const response = await fetch("/api/product/outreach/batch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: batch.running ? "stop" : "start" }),
+      });
+      const body = (await response.json()) as { batch?: BatchState; error?: string };
+      if (!response.ok || !body.batch) throw new Error(body.error ?? "Could not update the batch");
+      setBatch(body.batch);
+      setMessage(
+        body.batch.running
+          ? `Batch started — ${body.batch.queue.length} prospects queued.`
+          : "Batch stopped.",
+      );
+      router.refresh();
+    } catch (cause) {
+      setMessage(cause instanceof Error ? cause.message : "Could not update the batch");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  useEffect(() => {
+    if (!batch.running) return;
+    const timer = setInterval(async () => {
+      const response = await fetch("/api/product/outreach/batch/tick", { method: "POST" });
+      const body = (await response.json()) as { done?: boolean };
+      if (body.done) {
+        setBatch((current) => ({ ...current, running: false }));
+        setMessage("Batch complete.");
+      } else {
+        const state = await (await fetch("/api/product/outreach/batch")).json() as { batch: BatchState };
+        setBatch(state.batch);
+      }
+      router.refresh();
+    }, 90000);
+    return () => clearInterval(timer);
+  }, [batch.running, router]);
+
   async function saveWindow() {
     if (!callWindow) return;
     setBusy(true);
@@ -272,6 +317,18 @@ export default function OutreachDesk({
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={toggleBatch}
+            disabled={busy}
+            className={`rounded-full px-5 py-2 text-sm font-bold text-white disabled:opacity-60 ${
+              batch.running ? "bg-loss hover:brightness-110" : "bg-accent hover:bg-accent-dark"
+            }`}
+          >
+            {batch.running
+              ? `Stop batch · ${batch.cursor}/${batch.queue.length}`
+              : `Start review batch · ${prospects.filter((p) => p.status === "new").length} queued`}
+          </button>
           <details className="relative">
             <summary className="cursor-pointer rounded-full border border-line bg-white px-4 py-2 text-sm font-semibold text-ink-soft">
               Add prospect
@@ -328,6 +385,25 @@ export default function OutreachDesk({
           </details>
         </div>
       </div>
+
+      {batch.running && (
+        <div className="mt-5 rounded-xl border border-accent/25 bg-accent-soft/50 px-4 py-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-sm font-bold text-ink">
+              Batch running — {batch.cursor} of {batch.queue.length} called
+              {batch.lastProspect ? ` · last: ${batch.lastProspect}` : ""}
+            </p>
+            <span className="text-xs text-muted">Next call in ~90 seconds · keep this tab open</span>
+          </div>
+          <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white">
+            <div
+              className="h-full rounded-full bg-accent transition-all"
+              style={{ width: `${batch.queue.length ? Math.round((batch.cursor / batch.queue.length) * 100) : 0}%` }}
+            />
+          </div>
+          {batch.lastError && <p className="mt-2 text-xs font-semibold text-loss">{batch.lastError}</p>}
+        </div>
+      )}
 
       {message && <p className="mt-5 rounded-xl bg-accent-soft px-4 py-3 text-sm font-semibold text-accent-dark">{message}</p>}
 

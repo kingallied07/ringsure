@@ -62,6 +62,8 @@ The agent-facing endpoint `/api/product/knowledge/search` is deliberately exclud
 
 The adapters live in `lib/product/adapters.ts` and fall back to mock mode until credentials are present. The design is still one brain: a single Retell LLM + agent is provisioned once, and each business brief is injected as dynamic variables on every call.
 
+**Batch calling:** **Outreach desk → Start review batch** queues every prospect currently marked `new` and dials them one at a time, about 90 seconds apart, skipping do-not-call and stopped with the same button. The desk must stay open while it runs — each tick is driven by the browser, and Retell writes the transcript and outcome back via the webhook.
+
 **Real outbound calling** is wired through **Outreach desk → Call now (live)**. It registers the call with Retell using the outbound mode flow and the prospect's name, then asks Twilio to dial the prospect and bridge to `sip:{call_id}@sip.retellai.com`. When Retell posts `call_analyzed`, the webhook writes the transcript, recording, summary and outcome back to the prospect record, including do-not-call. The desk polls for updates while a call is dialling. Twilio must be upgraded from trial for this to reach unverified numbers.
 
 1. Set the variables in `.env.local` and in Netlify (see `.env.example`): `RETELL_API_KEY`, `RETELL_VOICE_ID`, `RETELL_MODEL` (the text model, e.g. `claude-5.5-haiku`), `RETELL_ANALYSIS_MODEL`, `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `NEXT_PUBLIC_APP_URL`.

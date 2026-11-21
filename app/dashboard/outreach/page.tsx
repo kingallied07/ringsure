@@ -1,14 +1,15 @@
 import OutreachDesk from "@/components/dashboard/OutreachDesk";
 import { outreachScenarios } from "@/lib/product/outreach";
-import { listCallWindows, listOutreachCalls, listProspects } from "@/lib/product/store";
+import { getBatchState, listCallWindows, listOutreachCalls, listProspects } from "@/lib/product/store";
 
 export const dynamic = "force-dynamic";
 
 export default async function OutreachPage() {
-  const [prospects, calls, windows] = await Promise.all([
+  const [prospects, calls, windows, batch] = await Promise.all([
     listProspects(),
     listOutreachCalls(),
     listCallWindows(),
+    getBatchState(),
   ]);
 
   return (
@@ -16,6 +17,7 @@ export default async function OutreachPage() {
       prospects={prospects}
       calls={calls}
       initialWindows={windows}
+      initialBatch={batch}
       scenarios={outreachScenarios.map((s) => ({ id: s.id, label: s.label, description: s.description }))}
     />
   );

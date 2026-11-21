@@ -62,6 +62,15 @@ export type OutreachCall = {
   createdAt: string;
 };
 
+export type BatchState = {
+  running: boolean;
+  queue: string[];
+  cursor: number;
+  startedAt?: string;
+  lastProspect?: string;
+  lastError?: string;
+};
+
 export type IsolationCheck = { name: string; passed: boolean; detail: string };
 
 export type CallWindow = {
@@ -103,6 +112,7 @@ type StoreShape = {
   outreachCalls: OutreachCall[];
   isolationRuns: IsolationRun[];
   callWindows: CallWindow[];
+  batch: BatchState;
 };
 
 const onServerless = Boolean(
@@ -245,6 +255,7 @@ function seed(): StoreShape {
     outreachCalls: [],
     isolationRuns: [],
     callWindows: [defaultCallWindow()],
+    batch: { running: false, queue: [], cursor: 0 },
   };
 }
 
@@ -261,6 +272,7 @@ function normalise(parsed: Partial<StoreShape>): StoreShape {
     outreachCalls: parsed.outreachCalls ?? [],
     isolationRuns: parsed.isolationRuns ?? [],
     callWindows: parsed.callWindows ?? [],
+    batch: parsed.batch ?? { running: false, queue: [], cursor: 0 },
   };
 }
 
@@ -569,6 +581,17 @@ export async function updateOutreachCall(
   Object.assign(call, Object.fromEntries(Object.entries(patch).filter(([, value]) => value !== undefined)));
   await writeStore(store);
   return call;
+}
+
+export async function getBatchState() {
+  return (await readStore()).batch;
+}
+
+export async function saveBatchState(batch: BatchState) {
+  const store = await readStore();
+  store.batch = batch;
+  await writeStore(store);
+  return batch;
 }
 
 export async function listIsolationRuns() {
