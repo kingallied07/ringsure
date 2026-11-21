@@ -5,7 +5,7 @@ const secret = process.env.CALL_CONTEXT_SECRET?.trim() || "ringsure-dev-call-con
 type ContextPayload = {
   tenantId: string;
   exp: number;
-  purpose: "inbound" | "outreach";
+  purpose: "inbound" | "outbound";
   callId?: string;
 };
 

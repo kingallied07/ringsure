@@ -168,11 +168,14 @@ export async function provisionBrain(existing?: { llmId?: string; agentId?: stri
   return createBrain();
 }
 
-export async function registerInboundCall(input: {
+export async function registerCall(input: {
   brief: Brief;
   agentId?: string;
   fromNumber: string;
   toNumber: string;
+  direction: "inbound" | "outbound";
+  prospectName?: string;
+  prospectId?: string;
 }): Promise<RegisteredCall> {
   if (!hasRetellCredentials() || !input.agentId) {
     const callId = `call_mock_${Date.now()}`;
@@ -183,12 +186,14 @@ export async function registerInboundCall(input: {
     agent_id: input.agentId,
     from_number: input.fromNumber,
     to_number: input.toNumber,
-    direction: "inbound",
+    direction: input.direction,
     retell_llm_dynamic_variables: buildDynamicVariables(
       input.brief,
-      mintCallContext(input.brief.id, "inbound"),
+      mintCallContext(input.brief.id, input.direction),
+      input.direction,
+      input.prospectName,
     ),
-    metadata: { businessId: input.brief.id },
+    metadata: { businessId: input.brief.id, prospectId: input.prospectId },
   });
 
   return {
@@ -196,6 +201,26 @@ export async function registerInboundCall(input: {
     callId: result.call_id ?? "",
     sipUri: `sip:${result.call_id ?? ""}@sip.retellai.com`,
   };
+}
+
+export function registerInboundCall(input: {
+  brief: Brief;
+  agentId?: string;
+  fromNumber: string;
+  toNumber: string;
+}) {
+  return registerCall({ ...input, direction: "inbound" });
+}
+
+export function registerOutboundCall(input: {
+  brief: Brief;
+  agentId?: string;
+  fromNumber: string;
+  toNumber: string;
+  prospectName?: string;
+  prospectId?: string;
+}) {
+  return registerCall({ ...input, direction: "outbound" });
 }
 
 function twilioAuth() {

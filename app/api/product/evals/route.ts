@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { runEvals } from "@/lib/product/mock-brain";
+import { runEvals, runOutboundEvals } from "@/lib/product/mock-brain";
 import { getBusiness, listEvalRuns, saveEvalRun } from "@/lib/product/store";
 
 export async function GET() {
@@ -7,7 +7,7 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  let body: { businessId?: string };
+  let body: { businessId?: string; mode?: "inbound" | "outbound" };
   try {
     body = (await request.json()) as typeof body;
   } catch {
@@ -19,7 +19,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Business not found" }, { status: 404 });
   }
 
-  const results = runEvals(business);
+  const results = body.mode === "outbound" ? runOutboundEvals() : runEvals(business);
   const run = await saveEvalRun({
     results,
     summary: {

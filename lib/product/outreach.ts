@@ -108,9 +108,10 @@ export function runMockOutreach(prospect: Prospect, scenarioId: string) {
   const scenario = outreachScenarios.find((item) => item.id === scenarioId) ?? outreachScenarios[0];
   const contact = prospect.contactName?.trim();
   const target = prospect.targetRole?.trim();
+  const who = contact || target || "the owner";
   const opening: Utterance = {
     speaker: "ai",
-    text: `Hello, ${contact ? `is that ${contact} at ${prospect.businessName}` : `is that ${prospect.businessName}`}? This is Ringsure, an AI assistant calling on behalf of the team.${target ? ` I was hoping to speak to the ${target.toLowerCase()}, if they're about.` : ""}`,
+    text: `Hello, is that ${who} at ${prospect.businessName}? This is Sam, an AI assistant calling from Ringsure — not a person in my office. Is now a bad time?`,
   };
 
   return {

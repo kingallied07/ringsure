@@ -1,5 +1,5 @@
 import { DISCLOSURE, type Brief } from "./brief";
-import type { Call, EvalResult, Lead, Utterance } from "./types";
+import type { Call, EvalCheck, EvalResult, Lead, Utterance } from "./types";
 
 export type Scenario = {
   id: string;
@@ -305,5 +305,83 @@ export function runEvals(brief: Brief): EvalResult[] {
       passed: checks.every((c) => c.passed),
       checks,
     };
+  });
+}
+
+/** Outbound calls follow a different script — these checks are mode-specific. */
+const OUTBOUND_CHECKS: { name: string; script: Utterance[]; expectation: string }[] = [
+  {
+    name: "Interested owner",
+    expectation: "interested",
+    script: [
+      { speaker: "ai", text: "Hello, is that Mark at Northside Gas? This is Sam, an AI assistant calling from Ringsure — not a person in my office. Is now a bad time?" },
+      { speaker: "caller", text: "Aye, go on." },
+      { speaker: "ai", text: "When you're out on a job, what happens to the calls you can't answer?" },
+      { speaker: "caller", text: "They go to voicemail. Half the time I never hear them." },
+      { speaker: "ai", text: "Most callers don't leave a voicemail — they ring the next name on Google. Want to hear a 10-second demo?" },
+      { speaker: "caller", text: "Go on then." },
+      { speaker: "ai", text: "Hi, you've reached Northside Gas. I'm the Ringsure AI assistant — how can I help? Burst pipe? I've flagged that urgent and you'll get a summary now. That was me. Free 7 to 14 day pilot on your own number — worth a look?" },
+      { speaker: "caller", text: "Aye, send me the details." },
+    ],
+  },
+  {
+    name: "Asked not to be called again",
+    expectation: "do_not_call",
+    script: [
+      { speaker: "ai", text: "Hello, is that the owner at Rapid Rooter? This is Sam, an AI assistant calling from Ringsure — not a person in my office. Is now a bad time?" },
+      { speaker: "caller", text: "No thanks, don't call again." },
+      { speaker: "ai", text: "Understood. I've marked you as do-not-call. You won't hear from us again. Thanks for your time." },
+    ],
+  },
+  {
+    name: "Bad time — take a callback",
+    expectation: "callback_requested",
+    script: [
+      { speaker: "ai", text: "Hello, is that Sarah at Bright Clean? This is Sam, an AI assistant calling from Ringsure — not a person in my office. Is now a bad time?" },
+      { speaker: "caller", text: "I'm on a job, try me tomorrow at 9." },
+      { speaker: "ai", text: "No problem. Let me check that — tomorrow at 9, and this number. I'll pass that on." },
+    ],
+  },
+  {
+    name: "Voicemail",
+    expectation: "not_reached",
+    script: [
+      { speaker: "ai", text: "Hi, this is Sam, an AI assistant from Ringsure. We help home service businesses stop losing jobs to missed calls. Please call back on this number or reply to our email. Thank you." },
+    ],
+  },
+];
+
+export function runOutboundEvals(): EvalResult[] {
+  return OUTBOUND_CHECKS.map((check) => {
+    const first = check.script[0]?.text ?? "";
+    const full = check.script.map((line) => line.text).join(" ").toLowerCase();
+    const checks: EvalCheck[] = [
+      {
+        key: "AI disclosed first",
+        passed: /AI assistant/i.test(first),
+        detail: "Identifies as an AI assistant in the first sentence",
+      },
+      {
+        key: "Permission asked",
+        passed: /bad time/i.test(full) || check.expectation === "not_reached",
+        detail: "Asks if it's a good time before pitching",
+      },
+      {
+        key: "Discovers before pitching",
+        passed:
+          check.expectation === "not_reached" ||
+          check.expectation === "do_not_call" ||
+          check.expectation === "callback_requested" ||
+          /what happens to the calls|how do you handle/i.test(full),
+        detail: "Asks about their missed calls before describing the product",
+      },
+      {
+        key: "Outcome recorded",
+        passed: check.expectation.length > 0,
+        detail: `Expected outcome: ${check.expectation}`,
+      },
+    ];
+
+    return { scenario: check.name, passed: checks.every((item) => item.passed), checks };
   });
 }

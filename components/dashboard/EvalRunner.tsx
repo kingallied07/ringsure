@@ -11,6 +11,7 @@ export default function EvalRunner({
   initialRuns: EvalRun[];
 }) {
   const [businessId, setBusinessId] = useState(businesses[0]?.id ?? "");
+  const [mode, setMode] = useState<"inbound" | "outbound">("inbound");
   const [runs, setRuns] = useState(initialRuns);
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -22,7 +23,7 @@ export default function EvalRunner({
       const response = await fetch("/api/product/evals", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ businessId }),
+        body: JSON.stringify({ businessId, mode }),
       });
       const body = (await response.json()) as { run?: EvalRun; error?: string };
       if (!response.ok || !body.run) throw new Error(body.error ?? "Could not run evals");
@@ -40,8 +41,8 @@ export default function EvalRunner({
     <div>
       <h1 className="font-display text-3xl font-extrabold text-ink">Quality evals</h1>
       <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted sm:text-base">
-        Six scripted callers run against the one brain and the selected brief. These checks validate
-        the pipeline and the brief rules — swap in real AI calls later without changing this harness.
+        One brain, two modes: inbound callers who need help, and outbound prospects who need a reason
+        to listen. Pick a mode, then run its scripted callers to check the disclosure, flow and rules.
       </p>
 
       <div className="card mt-8 flex flex-wrap items-end gap-4 p-6">
@@ -61,6 +62,20 @@ export default function EvalRunner({
               </option>
             ))}
           </select>
+        </div>
+        <div className="flex rounded-full border border-line bg-white p-1">
+          {(["inbound", "outbound"] as const).map((item) => (
+            <button
+              key={item}
+              type="button"
+              onClick={() => setMode(item)}
+              className={`rounded-full px-4 py-2 text-sm font-semibold capitalize transition-colors ${
+                mode === item ? "bg-ink text-white" : "text-muted hover:text-ink"
+              }`}
+            >
+              {item}
+            </button>
+          ))}
         </div>
         <button
           type="button"
