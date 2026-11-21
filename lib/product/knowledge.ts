@@ -43,7 +43,7 @@ export function renderOpener(template: string, prospectName: string, businessNam
 
 /** Said after the prospect's first reply — early enough to be fair, late enough not to kill the call. */
 export const OUTBOUND_DISCLOSURE =
-  "Small thing — I'm an AI assistant, not someone in your office, so you know who you're talking to. I'll keep this short.";
+  "Quick thing — I'm not a real person. I'll keep it short.";
 
 /** The facts the assistant is allowed to use when answering about Ringsure itself. */
 export const RINGSURE_FACT_SHEET = `ABOUT RINGSURE
