@@ -43,9 +43,9 @@ function hasRetellCredentials() {
   return Boolean(process.env.RETELL_API_KEY?.trim());
 }
 
-async function retell(path: string, body: Record<string, unknown>) {
+async function retell(path: string, body: Record<string, unknown>, method: "POST" | "PATCH" = "POST") {
   const response = await fetch(`https://api.retellai.com${path}`, {
-    method: "POST",
+    method,
     headers: {
       Authorization: `Bearer ${process.env.RETELL_API_KEY?.trim()}`,
       "Content-Type": "application/json",
@@ -59,16 +59,15 @@ async function retell(path: string, body: Record<string, unknown>) {
   return data as { llm_id?: string; agent_id?: string; call_id?: string };
 }
 
-async function provisionRetell(): Promise<ProvisionResult> {
-  const selectedVoice = voiceId();
-
-  const llm = await retell("/create-retell-llm", {
+function llmConfig() {
+  return {
     general_prompt: SYSTEM_PROMPT,
     general_tools: [
       {
         type: "end_call",
         name: "end_call",
-        description: "End the call once the caller's details have been captured and confirmed.",
+        description:
+          "End the call only after the problem is understood and the details have been captured and confirmed back to the caller.",
       },
       {
         type: "custom",
@@ -95,13 +94,15 @@ async function provisionRetell(): Promise<ProvisionResult> {
     begin_message: "{{opening_line}}",
     post_call_analysis_data: POST_CALL_ANALYSIS_FIELDS,
     post_call_analysis_model: analysisModel(),
-  });
+  };
+}
 
-  const agent = await retell("/create-agent", {
+function agentConfig(llmId: string) {
+  return {
     agent_name: "Ringsure Receptionist",
-    version_description: "One brain for all home service businesses; brief injected per call.",
-    response_engine: { type: "retell-llm", llm_id: llm.llm_id },
-    voice_id: selectedVoice,
+    version_description: "Discovery-first receptionist. One brain, brief injected per call.",
+    response_engine: { type: "retell-llm", llm_id: llmId },
+    voice_id: voiceId(),
     // Let Retell pick the TTS model that matches the selected voice.
     language: "en-GB",
     voice_temperature: 0.9,
@@ -126,18 +127,34 @@ async function provisionRetell(): Promise<ProvisionResult> {
       scope_boundaries: true,
       echo_verification: true,
     },
-  });
+  };
+}
 
+async function createBrain(): Promise<ProvisionResult> {
+  const llm = await retell("/create-retell-llm", llmConfig());
+  const agent = await retell("/create-agent", agentConfig(llm.llm_id ?? ""));
   return {
     mode: "retell",
     llmId: llm.llm_id ?? "",
     agentId: agent.agent_id ?? "",
-    voiceId: selectedVoice,
-    message: "Live Retell LLM and agent created. Add the agent ID to your imported Twilio number.",
+    voiceId: voiceId(),
+    message: "Live brain created with the new discovery-first prompt. Point number at Ringsure again to apply it.",
   };
 }
 
-export async function provisionBrain(): Promise<ProvisionResult> {
+async function updateBrain(llmId: string, agentId: string): Promise<ProvisionResult> {
+  await retell(`/update-retell-llm/${llmId}`, llmConfig(), "PATCH");
+  await retell(`/update-agent/${agentId}`, agentConfig(llmId), "PATCH");
+  return {
+    mode: "retell",
+    llmId,
+    agentId,
+    voiceId: voiceId(),
+    message: "Live brain updated with the new discovery-first prompt. Existing numbers already use this agent — just call in to test.",
+  };
+}
+
+export async function provisionBrain(existing?: { llmId?: string; agentId?: string }): Promise<ProvisionResult> {
   if (!hasRetellCredentials()) {
     return {
       mode: "mock",
@@ -147,7 +164,8 @@ export async function provisionBrain(): Promise<ProvisionResult> {
       message: "Mock mode — add RETELL_API_KEY to create the real brain.",
     };
   }
-  return provisionRetell();
+  if (existing?.llmId && existing?.agentId) return updateBrain(existing.llmId, existing.agentId);
+  return createBrain();
 }
 
 export async function registerInboundCall(input: {

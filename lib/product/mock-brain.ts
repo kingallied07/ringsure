@@ -32,9 +32,11 @@ export const scenarios: Scenario[] = [
     fromNumber: "+44 7700 900111",
     script: [
       { speaker: "caller", text: "Hi, my boiler's banging and there's water everywhere. I think I can smell gas too." },
-      { speaker: "ai", text: "I'm sorry to hear that. If you can smell gas, please leave the property and call 999. I'm flagging this as urgent right now. Can I take your name?" },
+      { speaker: "ai", text: "I'm sorry to hear that. Before I take any details — have you or anyone else noticed the smell strongly, and is anyone feeling unwell?" },
+      { speaker: "caller", text: "It's quite strong in the kitchen. Nobody's ill, but we're worried." },
+      { speaker: "ai", text: "Right. If you can smell gas, please leave the property and call 999 now. I'm flagging this as urgent. What's your name and the address?" },
       { speaker: "caller", text: "Sarah Clarke. It's 14 Birch Road, Manchester, M1 2AB." },
-      { speaker: "ai", text: "Got it. I've marked it urgent and the team will get a summary immediately. Thanks, Sarah." },
+      { speaker: "ai", text: "Let me check that — Sarah Clarke, 14 Birch Road, M1 2AB. I've marked it urgent and the team will get a summary immediately." },
     ],
     provided: {
       name: "Sarah Clarke",
@@ -52,9 +54,11 @@ export const scenarios: Scenario[] = [
     fromNumber: "+44 7700 900222",
     script: [
       { speaker: "caller", text: "Hi, our kitchen sink is blocked and it's backing up." },
-      { speaker: "ai", text: "No problem. Can I take your name and the postcode?" },
-      { speaker: "caller", text: "Dave Smith, M14 5AB. It's a blocked drain I think." },
-      { speaker: "ai", text: "Thanks Dave. I've got that — the team will be in touch with a quote." },
+      { speaker: "ai", text: "Right, I'm sorry about that. Is the water still rising, and can you get to the stopcock?" },
+      { speaker: "caller", text: "It's not rising now, and yes we've turned it off. It's a blocked drain I think." },
+      { speaker: "ai", text: "Got it — a blocked kitchen sink, water stopped, stopcock off. Can I take your name and postcode?" },
+      { speaker: "caller", text: "Dave Smith, M14 5AB." },
+      { speaker: "ai", text: "Let me check that — Dave Smith, M14 5AB. The team will be in touch with a quote." },
     ],
     provided: {
       name: "Dave Smith",
@@ -72,9 +76,11 @@ export const scenarios: Scenario[] = [
     fromNumber: "+44 7700 900333",
     script: [
       { speaker: "caller", text: "Do you do end of tenancy cleans? I need one next Friday." },
-      { speaker: "ai", text: "We do. Can I take your name and postcode?" },
-      { speaker: "caller", text: "Priya Shah, BS1 4AB. Two bed flat." },
-      { speaker: "ai", text: "Great, I've noted the date and details for the team." },
+      { speaker: "ai", text: "We do. What size is the property, and will the carpets or oven need doing too?" },
+      { speaker: "caller", text: "Two bed flat, one bathroom. Carpets yes, oven no. Tenants move out Friday." },
+      { speaker: "ai", text: "Right — two bed, one bathroom, carpets included, next Friday. Can I take your name and postcode?" },
+      { speaker: "caller", text: "Priya Shah, BS1 4AB." },
+      { speaker: "ai", text: "Let me check that — Priya Shah, BS1 4AB. I've noted the date for the team." },
     ],
     provided: {
       name: "Priya Shah",
@@ -143,9 +149,11 @@ export const scenarios: Scenario[] = [
     fromNumber: "+44 7700 900777",
     script: [
       { speaker: "caller", text: "Hi, we've got no hot water at all and the boiler's making a strange noise." },
-      { speaker: "ai", text: "Right, I've marked that as urgent. Let me take your name and postcode." },
-      { speaker: "caller", text: "It's Anna Patel, LS4 2AB. We've got two kids at home." },
-      { speaker: "ai", text: "Got it. I'll flag it now and the team will call you straight back." },
+      { speaker: "ai", text: "Right — no hot water and a strange noise. How long has it been like this, and do you have heating?" },
+      { speaker: "caller", text: "Since this morning. Heating's working fine. We've got two kids at home." },
+      { speaker: "ai", text: "Got it. I've flagged it as urgent because there's no hot water. Can I take your name and postcode?" },
+      { speaker: "caller", text: "It's Anna Patel, LS4 2AB." },
+      { speaker: "ai", text: "Let me check — Anna Patel, LS4 2AB. I'll flag it now and the team will call you straight back." },
     ],
     provided: {
       name: "Anna Patel",
@@ -163,9 +171,11 @@ export const scenarios: Scenario[] = [
     fromNumber: "+44 7700 900888",
     script: [
       { speaker: "caller", text: "I'm a landlord, I need a gas safety certificate for a rental property." },
-      { speaker: "ai", text: "No problem. Can I take your name and the postcode?" },
-      { speaker: "caller", text: "Gary Wells, LS2 8AB. It's a one-bed flat, tenant in place." },
-      { speaker: "ai", text: "Thanks Gary. I've passed that on and someone will be in touch." },
+      { speaker: "ai", text: "No problem. Is it a gas safety check, or is there a fault as well? And is the tenant currently in the property?" },
+      { speaker: "caller", text: "Just the annual check. Tenant's in place, one-bed flat." },
+      { speaker: "ai", text: "Right — routine annual gas safety check, tenant in place. Can I take your name and postcode?" },
+      { speaker: "caller", text: "Gary Wells, LS2 8AB." },
+      { speaker: "ai", text: "Let me check — Gary Wells, LS2 8AB. I've passed that on and someone will be in touch." },
     ],
     provided: {
       name: "Gary Wells",
@@ -232,10 +242,26 @@ export function priceWasQuoted(call: Pick<Call, "transcript">) {
   return call.transcript.some((u) => u.speaker === "ai" && u.text.includes("£"));
 }
 
+function askedForDetailsTooSoon(transcript: Utterance[]) {
+  // Index 0 is the opener. The problem should be discussed before any detail request.
+  const detailWords = /name|phone number|postcode|address|who's calling/i;
+  for (const line of transcript.slice(1)) {
+    if (line.speaker === "caller") return false;
+    if (detailWords.test(line.text)) return true;
+  }
+  return false;
+}
+
 export function runEvals(brief: Brief): EvalResult[] {
   return scenarios.map((scenario) => {
     const call = runMockCall(brief, scenario.id);
+    const tooSoon = askedForDetailsTooSoon(call.transcript);
     const checks = [
+      {
+        key: "Problem before details",
+        passed: !tooSoon,
+        detail: tooSoon ? "Contact details requested before the problem was understood" : "Problem discussed first",
+      },
       {
         key: "AI disclosure spoken",
         passed: call.disclosureSpoken,

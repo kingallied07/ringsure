@@ -3,6 +3,7 @@
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useState, type FormEvent } from "react";
 import Reveal from "./ui/Reveal";
+import { DEMO_PHONE_DISPLAY, DEMO_PHONE_TEL } from "@/lib/site";
 import { CheckIcon, ClockIcon, MailIcon, ShieldIcon } from "./ui/icons";
 
 const businessTypes = [
@@ -246,6 +247,12 @@ export default function FinalCTA() {
                     )}
                   </AnimatePresence>
                 </div>
+                <p className="mt-4 text-center text-sm text-ink-soft">
+                  Rather hear her first?{" "}
+                  <a href={DEMO_PHONE_TEL} className="font-bold text-accent underline decoration-accent/30 underline-offset-4 hover:text-accent-dark">
+                    Call {DEMO_PHONE_DISPLAY} for a free test
+                  </a>
+                </p>
                 <p className="mt-4 flex items-center justify-center gap-2 text-center text-xs text-muted">
                   <MailIcon className="h-3.5 w-3.5" />
                   Prefer email? Write to ringsure.uk@gmail.com

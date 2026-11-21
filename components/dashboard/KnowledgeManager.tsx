@@ -80,6 +80,21 @@ export default function KnowledgeManager({
     router.refresh();
   }
 
+  async function syncFacts() {
+    setBusy(true);
+    setStatus(null);
+    try {
+      const response = await fetch("/api/product/knowledge/sync", { method: "POST" });
+      const body = (await response.json()) as { updated?: number; added?: number };
+      setStatus(`Built-in facts synced: ${body.updated ?? 0} updated, ${body.added ?? 0} added.`);
+      router.refresh();
+    } catch {
+      setStatus("Could not sync built-in facts.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function runIsolation() {
     setBusy(true);
     try {
@@ -125,6 +140,21 @@ export default function KnowledgeManager({
               ))}
             </select>
             <p className="mt-2 text-xs text-muted">Tenant ID: {tenantId}</p>
+          </div>
+
+          <div className="card border-accent/25 bg-accent-soft/40 p-6">
+            <h2 className="font-display text-lg font-bold text-ink">Keep her up to date</h2>
+            <p className="mt-1 text-sm text-muted">
+              After we improve the script, sync the built-in facts so the live assistant gets them.
+            </p>
+            <button
+              type="button"
+              onClick={syncFacts}
+              disabled={busy}
+              className="mt-4 w-full rounded-full bg-ink px-5 py-2.5 text-sm font-bold text-white disabled:opacity-60"
+            >
+              {busy ? "Syncing…" : "Sync built-in facts"}
+            </button>
           </div>
 
           <div className="card p-6">

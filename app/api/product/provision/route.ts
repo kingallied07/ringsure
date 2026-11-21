@@ -8,7 +8,8 @@ export async function GET() {
 
 export async function POST() {
   try {
-    const result = await provisionBrain();
+    const current = await getIntegration();
+    const result = await provisionBrain(current ?? undefined);
     const integration = await saveIntegration({
       provider: result.mode,
       llmId: result.llmId,

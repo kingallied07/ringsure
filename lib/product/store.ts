@@ -3,6 +3,7 @@ import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { tradePresets, type Brief, type BriefData } from "./brief";
+import { BUILT_IN_KNOWLEDGE } from "./knowledge";
 import type { Call, EvalRun, Utterance } from "./types";
 
 export type KnowledgeKind = "faq" | "website" | "pricing" | "rule" | "note";
@@ -161,15 +162,14 @@ function seed(): StoreShape {
     evalRuns: [],
     integration: null,
     knowledge: [
-      {
-        id: "k_ringsure_1",
-        tenantId: "ringsure",
-        kind: "website",
-        title: "What Ringsure does",
-        content:
-          "Ringsure is an AI receptionist for UK home service businesses. It answers every call 24/7, qualifies the enquiry, collects job details and sends a clean lead summary by SMS, email or Telegram. Plans: Free Pilot 7 to 14 days at no cost, Starter £49, Growth £99, Pro £149 per month. One recovered job usually covers the cost.",
+      ...BUILT_IN_KNOWLEDGE.map((item, index) => ({
+        id: `builtin_${index}`,
+        tenantId: item.tenant,
+        kind: item.kind,
+        title: item.title,
+        content: item.content,
         createdAt: now,
-      },
+      })),
       {
         id: "k_heat_1",
         tenantId: "heatwise",
@@ -404,6 +404,36 @@ export async function addKnowledge(item: Omit<KnowledgeChunk, "id" | "createdAt"
   store.knowledge.unshift(chunk);
   await writeStore(store);
   return chunk;
+}
+
+export async function syncBuiltInKnowledge() {
+  const store = await readStore();
+  let updated = 0;
+  let added = 0;
+
+  for (const item of BUILT_IN_KNOWLEDGE) {
+    const existing = store.knowledge.find(
+      (chunk) => chunk.tenantId === item.tenant && chunk.title === item.title,
+    );
+    if (existing) {
+      existing.content = item.content;
+      existing.kind = item.kind;
+      updated += 1;
+    } else {
+      store.knowledge.unshift({
+        id: randomUUID().slice(0, 8),
+        tenantId: item.tenant,
+        kind: item.kind,
+        title: item.title,
+        content: item.content,
+        createdAt: new Date().toISOString(),
+      });
+      added += 1;
+    }
+  }
+
+  await writeStore(store);
+  return { updated, added };
 }
 
 export async function deleteKnowledge(id: string, tenantId: string) {

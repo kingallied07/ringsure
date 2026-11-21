@@ -85,7 +85,7 @@ The token is already in `.env.local`, which is gitignored. Keep it in environmen
 ## Before going live
 
 1. **Test the form end to end.** With the Telegram variables set, submit a test enquiry and confirm the message arrives.
-2. **Replace illustrative social proof.** The three pilot quotes are placeholders for layout only. Swap in verified customer results.
+2. **Watch the demo line.** Calls to `07830 312875` go straight to the live assistant — listen in, check the disclosure and discovery questions, then tune the prompt by clicking **Provision brain** in the desk (it updates the existing agent).
 3. **Update the domain if needed.** `https://ringsure.co.uk` appears in the layout metadata; `ringsure.uk@gmail.com` appears in the FAQ, final CTA and footer.
 4. **Confirm claims and compliance.** Check all statistics, pricing and GDPR/disclosure wording before publishing.
 
@@ -115,7 +115,7 @@ lib/product/          Brief schema, brain prompt, mock scenarios, adapters, stor
 components/
   dashboard/          Tenants, knowledge, outreach, QA, brief editor, simulator, evals
   Header.tsx  Hero.tsx  Problem.tsx  HowItWorks.tsx
-  WhoFor.tsx  SocialProof.tsx  Pricing.tsx  FAQ.tsx
+  WhoFor.tsx  CallToTest.tsx  Pricing.tsx  FAQ.tsx
   FinalCTA.tsx  Footer.tsx  SampleCall.tsx
   ui/               Reveal, Logo, icons, HeroGraphic
 scripts/
