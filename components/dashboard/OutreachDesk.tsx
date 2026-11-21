@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { CallWindow, OutreachCall, Prospect } from "@/lib/product/store";
 
 const inputClass =
@@ -212,6 +212,39 @@ export default function OutreachDesk({
     }
   }
 
+  async function callProspect() {
+    if (!selected || selected.status === "do-not-call") return;
+    setBusy(true);
+    setMessage(null);
+    try {
+      const response = await fetch("/api/product/outreach/call", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prospectId: selected.id }),
+      });
+      const body = (await response.json()) as { call?: OutreachCall; error?: string };
+      if (!response.ok || !body.call) throw new Error(body.error ?? "Could not place the call");
+      setCallList((current) => [body.call!, ...current]);
+      setMessage("Calling now. The transcript and summary will appear when the call ends.");
+      router.refresh();
+    } catch (cause) {
+      setMessage(cause instanceof Error ? cause.message : "Could not place the call");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  useEffect(() => {
+    if (!selectedId || !callList.some((call) => call.prospectId === selectedId && call.status === "dialling")) return;
+    const timer = setInterval(async () => {
+      const response = await fetch(`/api/product/outreach?prospectId=${selectedId}`);
+      const body = (await response.json()) as { calls: OutreachCall[] };
+      const remote = new Map(body.calls.map((call) => [call.id, call]));
+      setCallList((current) => current.map((call) => remote.get(call.id) ?? call));
+    }, 8000);
+    return () => clearInterval(timer);
+  }, [selectedId, callList]);
+
   async function saveWindow() {
     if (!callWindow) return;
     setBusy(true);
@@ -360,13 +393,17 @@ export default function OutreachDesk({
               </div>
 
               <div className="card p-6">
-                <h3 className="font-display text-lg font-bold text-ink">Run the next call</h3>
+                <h3 className="font-display text-lg font-bold text-ink">Make the next call</h3>
                 <div className="mt-4 flex flex-wrap gap-3">
                   <select className={`${inputClass} min-w-[220px] flex-1`} value={scenarioId} onChange={(e) => setScenarioId(e.target.value)}>
                     {scenarios.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
                   </select>
-                  <button type="button" onClick={runCall} disabled={busy || selected.status === "do-not-call"} className="rounded-full bg-ink px-5 py-2.5 text-sm font-bold text-white disabled:opacity-60">Run demo call</button>
+                  <button type="button" onClick={callProspect} disabled={busy || selected.status === "do-not-call"} className="rounded-full bg-accent px-5 py-2.5 text-sm font-bold text-white disabled:opacity-60">
+                    Call now (live)
+                  </button>
+                  <button type="button" onClick={runCall} disabled={busy || selected.status === "do-not-call"} className="rounded-full bg-ink px-5 py-2.5 text-sm font-bold text-white disabled:opacity-60">Run scripted demo</button>
                 </div>
+                <p className="mt-3 text-xs text-muted">Live calls dial the prospect from the Ringsure number. Scripted demos stay inside the desk.</p>
                 {selected.status === "do-not-call" && <p className="mt-3 text-sm font-semibold text-loss">Marked do-not-call — no calls will be made.</p>}
                 {selectedScenario && <p className="mt-3 text-xs text-muted">{selectedScenario.description}</p>}
               </div>
@@ -380,10 +417,20 @@ export default function OutreachDesk({
                       <div className="flex flex-wrap items-start justify-between gap-3">
                         <div>
                           <p className="text-sm font-bold text-ink">{call.outcome}</p>
-                          <p className="mt-0.5 text-xs text-muted">{new Date(call.createdAt).toLocaleString("en-GB")} · {call.scenario}</p>
+                          <p className="mt-0.5 text-xs text-muted">
+                            {new Date(call.createdAt).toLocaleString("en-GB")} · {call.scenario} ·{" "}
+                            <span className="font-semibold">{call.mode === "live" ? "Live call" : "Scripted demo"}</span>
+                            {call.mode === "live" && ` · ${call.status}`}
+                          </p>
                         </div>
-                        <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold ${call.disclosureSpoken ? "bg-accent-soft text-accent-dark" : "bg-[#f9e4df] text-loss"}`}>
-                          {call.disclosureSpoken ? "AI disclosed" : "No disclosure"}
+                        <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold ${
+                          call.mode === "live" && call.status === "dialling"
+                            ? "bg-amber-soft text-[#8a5a12]"
+                            : call.disclosureSpoken
+                              ? "bg-accent-soft text-accent-dark"
+                              : "bg-[#f9e4df] text-loss"
+                        }`}>
+                          {call.mode === "live" && call.status === "dialling" ? "Dialling…" : call.disclosureSpoken ? "AI disclosed" : "No disclosure"}
                         </span>
                       </div>
                       {call.summary && (
@@ -391,6 +438,9 @@ export default function OutreachDesk({
                           <span className="text-xs font-bold uppercase tracking-wide text-accent">Summary</span>
                           <p className="mt-1">{call.summary}</p>
                         </div>
+                      )}
+                      {call.recordingUrl && (
+                        <audio controls src={call.recordingUrl} className="mt-3 w-full" preload="none" />
                       )}
                       <button type="button" onClick={() => setOpenTranscript(openTranscript === call.id ? null : call.id)} className="mt-3 text-xs font-bold text-accent hover:underline">
                         {openTranscript === call.id ? "Hide transcript" : "View transcript"}

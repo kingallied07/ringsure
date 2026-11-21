@@ -276,6 +276,36 @@ export async function configureTwilioNumber(brief: Brief, agentId?: string): Pro
   };
 }
 
+/** Places the actual outbound call through Twilio, dialling the Retell SIP endpoint. */
+export async function dialOutbound(input: {
+  toNumber: string;
+  fromNumber: string;
+  sipUri: string;
+  statusCallback?: string;
+}) {
+  const auth = twilioAuth();
+  if (!auth) throw new Error("Twilio credentials are not configured");
+
+  const twiml = `<?xml version="1.0" encoding="UTF-8"?><Response><Dial><Sip>${input.sipUri}</Sip></Dial></Response>`;
+  const body = new URLSearchParams({
+    To: input.toNumber,
+    From: input.fromNumber,
+    Twiml: twiml,
+    Method: "POST",
+  });
+  if (input.statusCallback) body.set("StatusCallback", input.statusCallback);
+
+  const response = await fetch(
+    `https://api.twilio.com/2010-04-01/Accounts/${auth.sid}/Calls.json`,
+    { method: "POST", headers: { Authorization: auth.header }, body },
+  );
+  const data = (await response.json().catch(() => null)) as { sid?: string; message?: string } | null;
+  if (!response.ok) {
+    throw new Error(data?.message || `Twilio call failed (${response.status})`);
+  }
+  return { callSid: data?.sid ?? "" };
+}
+
 export function twilioVoiceXml(sipUri: string) {
   return `<?xml version="1.0" encoding="UTF-8"?>
 <Response>

@@ -116,6 +116,8 @@ export function runMockOutreach(prospect: Prospect, scenarioId: string) {
 
   return {
     prospectId: prospect.id,
+    mode: "mock" as const,
+    status: "completed" as const,
     scenario: scenario.label,
     transcript: [opening, ...scenario.script],
     outcome: scenario.outcome,

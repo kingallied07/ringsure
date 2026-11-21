@@ -1,5 +1,14 @@
 import { notifyLead } from "@/lib/product/notify";
-import { findBusinessByNumber, listCalls, saveCall } from "@/lib/product/store";
+import {
+  findBusinessByNumber,
+  findOutreachCallByProviderId,
+  listCalls,
+  listProspects,
+  saveCall,
+  updateOutreachCall,
+  updateProspect,
+  type Prospect,
+} from "@/lib/product/store";
 import type { Lead, Utterance } from "@/lib/product/types";
 import { verifyRetellSignature } from "@/lib/product/webhook";
 
@@ -46,6 +55,60 @@ function parseTranscript(transcript: RetellCall["transcript"]): Utterance[] {
   }));
 }
 
+async function handleOutboundResult(
+  call: RetellCall,
+  read: (analysis: Record<string, unknown> | undefined, key: string) => string,
+  parse: (transcript: RetellCall["transcript"]) => Utterance[],
+  prospectId?: string,
+  outreachCallId?: string,
+) {
+  const callId = call.call_id ?? "";
+  const analysis = call.call_analysis;
+  const transcript = parse(call.transcript);
+  const outcome = read(analysis, "outcome") || "Call completed";
+  const doNotCall = read(analysis, "do_not_call").toLowerCase() === "yes";
+  const nextStep = read(analysis, "next_step");
+  const notes = read(analysis, "notes");
+  const email = read(analysis, "email");
+  const contactName = read(analysis, "caller_name");
+  const summary = [outcome, nextStep, notes, email ? `Email: ${email}` : ""]
+    .filter(Boolean)
+    .join(" — ");
+
+  const disclosureSpoken =
+    transcript.some((line) => /AI assistant|AI receptionist|not a person/i.test(line.text)) ||
+    /AI assistant/i.test(transcript[0]?.text ?? "");
+
+  if (outreachCallId) {
+    await updateOutreachCall(outreachCallId, {
+      providerCallId: callId,
+      recordingUrl: call.recording_url,
+      status: "completed",
+      outcome,
+      summary,
+      transcript,
+      disclosureSpoken,
+    });
+  }
+
+  const targetId = prospectId ?? (callId ? (await findOutreachCallByProviderId(callId))?.prospectId : undefined);
+  if (!targetId) return;
+
+  const prospect = (await listProspects()).find((item) => item.id === targetId);
+  if (!prospect) return;
+
+  let status: Prospect["status"] = "contacted";
+  if (doNotCall || /do.?not.?call|not interested/i.test(outcome)) status = "do-not-call";
+  else if (/interested|pilot|signed.?up/i.test(outcome)) status = "interested";
+  else if (/callback/i.test(outcome)) status = "contacted";
+
+  await updateProspect(targetId, {
+    status,
+    contactName: prospect.contactName || contactName || undefined,
+    notes: [prospect.notes, summary].filter(Boolean).join("\n").slice(0, 1000),
+  });
+}
+
 export async function POST(request: Request) {
   const raw = await request.text();
   const signature = request.headers.get("x-retell-signature");
@@ -72,6 +135,15 @@ export async function POST(request: Request) {
 
   const existing = await listCalls();
   if (existing.some((saved) => saved.providerCallId === call.call_id)) {
+    return new Response(null, { status: 204 });
+  }
+
+  const prospectId =
+    typeof call.metadata?.prospectId === "string" ? call.metadata.prospectId : undefined;
+  const outgoing = await findOutreachCallByProviderId(call.call_id);
+
+  if (prospectId || outgoing) {
+    await handleOutboundResult(call, analysisValue, parseTranscript, prospectId, outgoing?.id);
     return new Response(null, { status: 204 });
   }
 

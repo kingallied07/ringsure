@@ -50,6 +50,10 @@ export type Prospect = {
 export type OutreachCall = {
   id: string;
   prospectId: string;
+  providerCallId?: string;
+  recordingUrl?: string;
+  mode: "mock" | "live";
+  status: "dialling" | "completed" | "failed";
   scenario: string;
   transcript: Utterance[];
   outcome: string;
@@ -532,6 +536,22 @@ export async function addOutreachCall(call: Omit<OutreachCall, "id" | "createdAt
   store.outreachCalls.unshift(saved);
   await writeStore(store);
   return saved;
+}
+
+export async function findOutreachCallByProviderId(providerCallId: string) {
+  return (await readStore()).outreachCalls.find((call) => call.providerCallId === providerCallId) ?? null;
+}
+
+export async function updateOutreachCall(
+  id: string,
+  patch: Partial<Omit<OutreachCall, "id" | "createdAt">>,
+) {
+  const store = await readStore();
+  const call = store.outreachCalls.find((item) => item.id === id);
+  if (!call) return null;
+  Object.assign(call, Object.fromEntries(Object.entries(patch).filter(([, value]) => value !== undefined)));
+  await writeStore(store);
+  return call;
 }
 
 export async function listIsolationRuns() {
