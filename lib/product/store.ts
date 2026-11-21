@@ -387,6 +387,18 @@ export async function saveEvalRun(run: Omit<EvalRun, "id" | "ranAt">) {
 }
 
 export async function getIntegration() {
+  // Environment variables survive redeploys; the shared store may not.
+  const envAgent = process.env.RETELL_AGENT_ID?.trim();
+  const envLlm = process.env.RETELL_LLM_ID?.trim();
+  if (envAgent && envLlm) {
+    return {
+      provider: "retell" as const,
+      llmId: envLlm,
+      agentId: envAgent,
+      voiceId: process.env.RETELL_VOICE_ID?.trim() || undefined,
+      provisionedAt: "from environment",
+    };
+  }
   return (await readStore()).integration;
 }
 
